@@ -22,7 +22,7 @@ function getOAuthClient() {
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    'process.env.CALLBACK_URL || 'process.env.CALLBACK_URL || 'process.env.CALLBACK_URL || 'process.env.CALLBACK_URL || 'process.env.CALLBACK_URL || 'http://localhost:3000/auth/callback''''''
+    process.env.CALLBACK_URL || 'http://localhost:3000/auth/callback'
   );
 }
 
