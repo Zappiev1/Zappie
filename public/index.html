@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Zappie — Ta boîte mail, enfin zéro stress</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:#0f0f13;color:#fff;min-height:100vh;}
+.hero{max-width:680px;margin:0 auto;padding:5rem 2rem 3rem;text-align:center;}
+.badge{display:inline-flex;align-items:center;gap:6px;background:#1a1830;color:#9b8ff5;font-size:12px;font-weight:500;padding:6px 14px;border-radius:100px;margin-bottom:2rem;border:1px solid #2e2a5e;}
+.dot{width:6px;height:6px;border-radius:50%;background:#7B68EE;}
+h1{font-family:'Syne',sans-serif;font-size:52px;font-weight:800;line-height:1.1;margin-bottom:1.2rem;}
+h1 span{color:#7B68EE;}
+.sub{font-size:17px;color:#888;max-width:460px;margin:0 auto 2.5rem;line-height:1.7;}
+.btn-google{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1a1a1a;border:none;border-radius:12px;padding:14px 28px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;text-decoration:none;transition:opacity 0.15s;}
+.btn-google:hover{opacity:0.9;}
+.btn-google svg{width:20px;height:20px;}
+.trust{font-size:12px;color:#555;margin-top:14px;}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;max-width:680px;margin:4rem auto 0;padding:0 2rem 4rem;}
+.feat{background:#16161f;border:1px solid #222;border-radius:16px;padding:1.25rem;}
+.icon{width:36px;height:36px;background:#1a1830;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px;}
+.feat h3{font-size:14px;font-weight:500;margin-bottom:4px;}
+.feat p{font-size:12px;color:#666;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="badge"><span class="dot"></span> Propulsé par l'IA</div>
+  <h1>Ta boîte mail,<br><span>enfin zéro stress.</span></h1>
+  <p class="sub">Zappie range automatiquement les emails inutiles dans un dossier dédié. Rien n'est jamais supprimé — tu gardes le contrôle total.</p>
+  <a href="/auth/google" class="btn-google">
+    <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Continuer avec Google
+  </a>
+  <p class="trust">Gratuit 14 jours · Aucune carte requise · Rien n'est supprimé</p>
+</div>
+<div class="features">
+  <div class="feat"><div class="icon">📁</div><h3>Dossier Zappie</h3><p>Les emails inutiles sont rangés automatiquement, jamais supprimés</p></div>
+  <div class="feat"><div class="icon">🧠</div><h3>IA intelligente</h3><p>Claude analyse chaque email et décide s'il est important ou non</p></div>
+  <div class="feat"><div class="icon">☀️</div><h3>Résumé quotidien</h3><p>Reçois chaque matin uniquement ce qui est urgent</p></div>
+  <div class="feat"><div class="icon">↩️</div><h3>Restauration 1 clic</h3><p>Un email rangé par erreur ? Tu le récupères instantanément</p></div>
+</div>
+</body>
+</html>

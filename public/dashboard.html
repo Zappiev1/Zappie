@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Zappie — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:#0f0f13;color:#fff;min-height:100vh;}
+nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;border-bottom:1px solid #1a1a1a;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:#7B68EE;}
+.nav-right{display:flex;align-items:center;gap:12px;}
+#user-email{font-size:13px;color:#666;}
+.btn-logout{background:transparent;border:1px solid #2a2a2a;color:#888;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+main{max-width:800px;margin:0 auto;padding:2rem;}
+h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:0.3rem;}
+.subtitle{color:#666;font-size:14px;margin-bottom:1.5rem;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem;}
+.stat{background:#16161f;border:1px solid #222;border-radius:12px;padding:1.2rem;}
+.stat-num{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#7B68EE;}
+.stat-label{font-size:12px;color:#666;margin-top:2px;}
+.tabs{display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;}
+.tab{background:#16161f;border:1px solid #222;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:500;color:#666;cursor:pointer;transition:all 0.15s;}
+.tab.active{background:#7B68EE;border-color:#7B68EE;color:#fff;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:10px;padding:12px 20px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:1.5rem;}
+.btn-purple{background:#7B68EE;color:#fff;}
+.btn-purple:disabled{background:#333;cursor:not-allowed;}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;display:none;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.section-title{font-size:12px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;}
+.email-list{display:flex;flex-direction:column;gap:8px;}
+.email-item{background:#16161f;border:1px solid #222;border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.email-info{flex:1;min-width:0;}
+.email-from{font-size:12px;color:#7B68EE;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.email-subject{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.email-snippet{font-size:12px;color:#555;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.email-size{font-size:12px;color:#e74c3c;font-weight:500;margin-top:2px;}
+.btn-action{background:transparent;border:1px solid #2a2a2a;color:#888;padding:5px 10px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.btn-action:hover{border-color:#7B68EE;color:#7B68EE;}
+.btn-action.red:hover{border-color:#e74c3c;color:#e74c3c;}
+.empty{text-align:center;padding:3rem;color:#444;font-size:14px;}
+.storage-info{background:#16161f;border:1px solid #222;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;}
+.storage-size{font-size:16px;font-weight:500;color:#e74c3c;}
+.summary-box{background:#16161f;border:1px solid #2a2a3e;border-radius:12px;padding:1.5rem;line-height:1.8;font-size:14px;color:#ccc;white-space:pre-wrap;}
+.toast{position:fixed;bottom:2rem;right:2rem;background:#7B68EE;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">Zappie</div>
+  <div class="nav-right">
+    <span id="user-email"></span>
+    <button class="btn-logout" onclick="location.href='/auth/logout'">Déconnexion</button>
+  </div>
+</nav>
+<main>
+  <h1>Dashboard</h1>
+  <p class="subtitle">Ton assistant email intelligent.</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="stat-processed">0</div><div class="stat-label">Emails analysés</div></div>
+    <div class="stat"><div class="stat-num" id="stat-moved">0</div><div class="stat-label">Rangés dans Zappie</div></div>
+    <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total dans Zappie</div></div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" id="tab-btn-tri" onclick="switchTab('tri')">⚡ Tri IA</div>
+    <div class="tab" id="tab-btn-stockage" onclick="switchTab('stockage')">🗄️ Stockage</div>
+    <div class="tab" id="tab-btn-archive" onclick="switchTab('archive')">📦 Archivage</div>
+    <div class="tab" id="tab-btn-resume" onclick="switchTab('resume')">☀️ Résumé du jour</div>
+    <div class="tab" id="tab-btn-inscriptions" onclick="switchTab('inscriptions')">🔍 Mes inscriptions</div>
+  </div>
+
+  <div class="tab-content active" id="tab-tri">
+    <button class="btn btn-purple" id="btn-analyze" onclick="analyzeEmails()">
+      <div class="spinner" id="spinner-analyze"></div>
+      <span id="btn-analyze-text">⚡ Analyser mes emails</span>
+    </button>
+    <div class="section-title">Emails rangés dans le dossier Zappie</div>
+    <div class="email-list" id="email-list"><div class="empty">Clique sur "Analyser" pour commencer</div></div>
+  </div>
+
+  <div class="tab-content" id="tab-stockage">
+    <button class="btn btn-purple" onclick="loadStorage()">
+      <span>🗄️ Scanner les gros emails</span>
+    </button>
+    <div id="storage-result"></div>
+  </div>
+
+  <div class="tab-content" id="tab-archive">
+    <p style="color:#888;font-size:14px;margin-bottom:1rem;">Archive automatiquement tous les emails de plus d'1 an encore dans ta boîte principale.</p>
+    <button class="btn btn-purple" id="btn-archive" onclick="archiveOld()">
+      <div class="spinner" id="spinner-archive"></div>
+      <span id="btn-archive-text">📦 Archiver les emails +1 an</span>
+    </button>
+    <div id="archive-result"></div>
+  </div>
+
+  <div class="tab-content" id="tab-resume">
+    <button class="btn btn-purple" onclick="loadSummary()">
+      <span>☀️ Générer mon résumé du jour</span>
+    </button>
+    <div id="summary-result"></div>
+  </div>
+
+  <div class="tab-content" id="tab-inscriptions">
+    <p style="color:#888;font-size:14px;margin-bottom:1rem;">Zappie analyse tes emails pour trouver tous les sites où tu as un compte. Tu peux envoyer une demande de suppression en 1 clic.</p>
+    <button class="btn btn-purple" onclick="loadSubscriptions()">
+      <span>🔍 Scanner mes inscriptions</span>
+    </button>
+    <div id="subscriptions-result"></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+  document.getElementById('tab-btn-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+async function init() {
+  var res = await fetch('/api/me');
+  var data = await res.json();
+  if (!data.connected) { location.href = '/'; return; }
+  document.getElementById('user-email').textContent = data.email;
+  loadZappieEmails();
+}
+
+async function loadZappieEmails() {
+  var res = await fetch('/api/zappie-emails');
+  var data = await res.json();
+  document.getElementById('stat-total').textContent = data.total || 0;
+  renderEmails(data.emails || []);
+}
+
+function renderEmails(emails) {
+  var list = document.getElementById('email-list');
+  if (!emails.length) { list.innerHTML = '<div class="empty">Aucun email dans le dossier Zappie pour l\'instant</div>'; return; }
+  list.innerHTML = emails.map(function(e) {
+    return '<div class="email-item" id="email-' + e.id + '"><div class="email-info"><div class="email-from">' + esc(e.from) + '</div><div class="email-subject">' + esc(e.subject) + '</div><div class="email-snippet">' + esc(e.snippet) + '</div></div><button class="btn-action" onclick="restore(\'' + e.id + '\')">↩ Restaurer</button></div>';
+  }).join('');
+}
+
+async function analyzeEmails() {
+  var btn = document.getElementById('btn-analyze');
+  var spinner = document.getElementById('spinner-analyze');
+  var btnText = document.getElementById('btn-analyze-text');
+  btn.disabled = true; spinner.style.display = 'block'; btnText.textContent = 'Analyse en cours...';
+  try {
+    var res = await fetch('/api/analyze', { method: 'POST' });
+    var data = await res.json();
+    document.getElementById('stat-processed').textContent = parseInt(document.getElementById('stat-processed').textContent) + (data.processed || 0);
+    document.getElementById('stat-moved').textContent = parseInt(document.getElementById('stat-moved').textContent) + (data.moved || 0);
+    showToast('✅ ' + data.processed + ' analysés — ' + data.moved + ' rangés dans Zappie');
+    loadZappieEmails();
+  } catch(e) { showToast('❌ Erreur lors de l\'analyse'); }
+  btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = '⚡ Analyser mes emails';
+}
+
+async function restore(id) {
+  await fetch('/api/restore/' + id, { method: 'POST' });
+  var el = document.getElementById('email-' + id);
+  if (el) el.remove();
+  showToast('↩ Email restauré !');
+  document.getElementById('stat-total').textContent = Math.max(0, parseInt(document.getElementById('stat-total').textContent) - 1);
+}
+
+async function loadStorage() {
+  var result = document.getElementById('storage-result');
+  result.innerHTML = '<div class="empty">Scan en cours...</div>';
+  try {
+    var res = await fetch('/api/storage');
+    var data = await res.json();
+    if (!data.emails.length) { result.innerHTML = '<div class="empty">Aucun gros email trouvé 🎉</div>'; return; }
+    var html = '<div class="storage-info"><span style="font-size:13px;color:#888">Espace récupérable estimé</span><span class="storage-size">' + data.totalSizeFormatted + '</span></div><div class="email-list">';
+    data.emails.forEach(function(e) {
+      html += '<div class="email-item" id="storage-' + e.id + '"><div class="email-info"><div class="email-from">' + esc(e.from) + '</div><div class="email-subject">' + esc(e.subject) + '</div><div class="email-size">📎 ' + e.sizeFormatted + '</div></div><button class="btn-action red" onclick="deleteEmail(\'' + e.id + '\')">🗑 Supprimer</button></div>';
+    });
+    html += '</div>';
+    result.innerHTML = html;
+  } catch(e) { result.innerHTML = '<div class="empty">Erreur lors du scan</div>'; }
+}
+
+async function deleteEmail(id) {
+  if (!confirm('Supprimer cet email ?')) return;
+  await fetch('/api/delete/' + id, { method: 'DELETE' });
+  var el = document.getElementById('storage-' + id);
+  if (el) el.remove();
+  showToast('🗑 Email supprimé !');
+}
+
+async function archiveOld() {
+  var btn = document.getElementById('btn-archive');
+  var spinner = document.getElementById('spinner-archive');
+  var btnText = document.getElementById('btn-archive-text');
+  btn.disabled = true; spinner.style.display = 'block'; btnText.textContent = 'Archivage en cours...';
+  try {
+    var res = await fetch('/api/archive-old', { method: 'POST' });
+    var data = await res.json();
+    document.getElementById('archive-result').innerHTML = '<div class="summary-box">✅ ' + data.archived + ' emails de plus d\'1 an archivés !</div>';
+    showToast('📦 ' + data.archived + ' emails archivés !');
+  } catch(e) { showToast('❌ Erreur lors de l\'archivage'); }
+  btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = '📦 Archiver les emails +1 an';
+}
+
+async function loadSummary() {
+  var result = document.getElementById('summary-result');
+  result.innerHTML = '<div class="empty">Génération en cours...</div>';
+  try {
+    var res = await fetch('/api/daily-summary');
+    var data = await res.json();
+    result.innerHTML = '<div class="section-title">' + data.count + ' email(s) important(s) aujourd\'hui</div><div class="summary-box">' + esc(data.summary) + '</div>';
+  } catch(e) { result.innerHTML = '<div class="empty">Erreur lors de la génération</div>'; }
+}
+
+async function loadSubscriptions() {
+  var result = document.getElementById('subscriptions-result');
+  result.innerHTML = '<div class="empty">Scan en cours... (peut prendre 30 secondes)</div>';
+  try {
+    var res = await fetch('/api/subscriptions');
+    var data = await res.json();
+    if (!data.subscriptions.length) { result.innerHTML = '<div class="empty">Aucune inscription trouvée</div>'; return; }
+    var html = '<div class="section-title">' + data.total + ' inscription(s) trouvée(s)</div><div class="email-list">';
+    data.subscriptions.forEach(function(s) {
+      html += '<div class="email-item" id="sub-' + s.id + '"><div class="email-info"><div class="email-from">🌐 ' + esc(s.domain) + '</div><div class="email-subject">' + esc(s.subject) + '</div><div class="email-snippet">' + esc(s.date) + '</div></div><button class="btn-action red" onclick="unsubscribe(\'' + s.domain + '\', \'' + s.id + '\')">🗑 Supprimer compte</button></div>';
+    });
+    html += '</div>';
+    result.innerHTML = html;
+  } catch(e) { result.innerHTML = '<div class="empty">Erreur lors du scan</div>'; }
+}
+
+async function unsubscribe(domain, id) {
+  if (!confirm('Envoyer une demande de suppression de compte à ' + domain + ' ?')) return;
+  var btn = document.querySelector('#sub-' + id + ' .btn-action');
+  if (btn) { btn.textContent = 'Envoi...'; btn.disabled = true; }
+  try {
+    var res = await fetch('/api/unsubscribe', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({domain: domain}) });
+    var data = await res.json();
+    if (data.success) {
+      if (btn) { btn.textContent = '✅ Envoyé'; }
+      showToast('✅ Email de suppression envoyé à ' + domain + ' !');
+    }
+  } catch(e) { showToast('❌ Erreur lors de l\'envoi'); }
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>
