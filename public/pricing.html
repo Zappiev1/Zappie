@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Zappie — Pricing</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#080810;--bg2:#0d0d1a;--purple:#7c5cfc;--purple2:#a78bfa;--glow:rgba(124,92,252,0.35);--text:#f0eeff;--text2:#9490b8;--text3:#4a4870;--border:rgba(124,92,252,0.2);--border2:rgba(255,255,255,0.06);--green:#22c55e;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Cabinet Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(124,92,252,0.15),transparent);pointer-events:none;}
+nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;border-bottom:1px solid var(--border2);}
+.logo{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:900;text-decoration:none;color:var(--text);}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--purple),var(--purple2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+main{max-width:800px;margin:0 auto;padding:4rem 2rem;text-align:center;position:relative;z-index:1;}
+h1{font-size:42px;font-weight:900;letter-spacing:-1.5px;margin-bottom:1rem;}
+h1 span{background:linear-gradient(135deg,var(--purple),var(--purple2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.subtitle{font-size:16px;color:var(--text2);margin-bottom:3rem;}
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:2rem;}
+@media(max-width:600px){.plans{grid-template-columns:1fr;}}
+.plan{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:2rem;text-align:left;position:relative;}
+.plan.pro{border-color:var(--purple);box-shadow:0 0 40px rgba(124,92,252,0.15);}
+.plan-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;font-size:11px;font-weight:700;padding:4px 14px;border-radius:100px;white-space:nowrap;}
+.plan-name{font-size:14px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+.plan-price{font-size:42px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;}
+.plan-price span{font-size:16px;font-weight:500;color:var(--text2);}
+.plan-period{font-size:13px;color:var(--text3);margin-bottom:1.5rem;}
+.plan-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem;}
+.plan-features li{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text2);}
+.plan-features li.active{color:var(--text);}
+.check{font-size:14px;}
+.btn-plan{width:100%;padding:13px;border:none;border-radius:12px;font-family:'Cabinet Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-free{background:var(--bg);border:1px solid var(--border2);color:var(--text2);}
+.btn-free:hover{border-color:var(--border);color:var(--text);}
+.btn-pro{background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;box-shadow:0 0 20px var(--glow);}
+.btn-pro:hover{transform:translateY(-2px);box-shadow:0 0 40px var(--glow);}
+.guarantee{font-size:13px;color:var(--text3);margin-top:1rem;}
+.guarantee span{color:var(--green);}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="logo"><div class="logo-icon">⚡</div>Zappie</a>
+</nav>
+<main>
+  <h1>Simple et <span>transparent</span></h1>
+  <p class="subtitle">Commence gratuitement. Passe à Pro quand tu es prêt.</p>
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">0€<span></span></div>
+      <div class="plan-period">Pour toujours</div>
+      <ul class="plan-features">
+        <li class="active"><span class="check">✅</span> Tri IA — 20 emails/analyse</li>
+        <li class="active"><span class="check">✅</span> Résumé du jour — 3x/semaine</li>
+        <li><span class="check">❌</span> Tri automatique</li>
+        <li><span class="check">❌</span> Nettoyage stockage</li>
+        <li><span class="check">❌</span> Inbox Detox</li>
+        <li><span class="check">❌</span> Scanner vie numérique</li>
+      </ul>
+      <button class="btn-plan btn-free" onclick="location.href='/auth/google'">Commencer gratuitement</button>
+    </div>
+    <div class="plan pro">
+      <div class="plan-badge">⭐ Le plus populaire</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">7.99€<span>/mois</span></div>
+      <div class="plan-period">Annulation à tout moment</div>
+      <ul class="plan-features">
+        <li class="active"><span class="check">✅</span> Tri IA — emails illimités</li>
+        <li class="active"><span class="check">✅</span> Résumé du jour — illimité</li>
+        <li class="active"><span class="check">✅</span> Tri automatique ON/OFF</li>
+        <li class="active"><span class="check">✅</span> Nettoyage stockage</li>
+        <li class="active"><span class="check">✅</span> Inbox Detox complet</li>
+        <li class="active"><span class="check">✅</span> Scanner vie numérique</li>
+      </ul>
+      <button class="btn-plan btn-pro" onclick="startCheckout()">Passer à Pro — 7.99€/mois</button>
+    </div>
+  </div>
+  <div class="guarantee"><span>✅ 14 jours d'essai gratuit</span> — Aucune carte requise pour commencer</div>
+</main>
+<script>
+async function startCheckout() {
+  const res = await fetch('/api/create-checkout', { method: 'POST' });
+  const data = await res.json();
+  if (data.url) { window.location.href = data.url; }
+  else { alert('Connecte-toi d\'abord avec Google !'); location.href = '/auth/google'; }
+}
+</script>
+</body>
+</html>

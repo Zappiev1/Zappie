@@ -374,3 +374,49 @@ app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Zappie tourne sur http://localhost:${PORT}`));
+
+// ─── STRIPE PAIEMENT ──────────────────────────────────────────────────────────
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+const PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_1TVZVV5XAZHLam3soJRrAs8A';
+const APP_URL = process.env.APP_URL || 'http://localhost:3000';
+
+// Créer une session de paiement Stripe
+app.post('/api/create-checkout', async (req, res) => {
+  if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'subscription',
+      line_items: [{ price: PRICE_ID, quantity: 1 }],
+      success_url: APP_URL + '/dashboard?success=true',
+      cancel_url: APP_URL + '/dashboard?canceled=true',
+      customer_email: req.session.email,
+      metadata: { email: req.session.email }
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Vérifier si l'utilisateur est Pro
+app.get('/api/subscription-status', async (req, res) => {
+  if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const customers = await stripe.customers.list({ email: req.session.email, limit: 1 });
+    if (!customers.data.length) return res.json({ isPro: false });
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customers.data[0].id,
+      status: 'active',
+      limit: 1
+    });
+    res.json({ isPro: subscriptions.data.length > 0 });
+  } catch (err) {
+    res.json({ isPro: false });
+  }
+});
+
+// Page pricing
+app.get('/pricing', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pricing.html')));

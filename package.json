@@ -11,11 +11,13 @@
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
+    "@stripe/stripe-js": "^9.4.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "googleapis": "^171.4.0",
-    "nodemailer": "^8.0.7"
+    "nodemailer": "^8.0.7",
+    "stripe": "^22.1.1"
   }
 }
