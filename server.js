@@ -74,6 +74,40 @@ async function checkIsPro(email) {
   } catch { return false; }
 }
 
+
+// ─── FREE PLAN: USAGE TRACKER (3x/semaine par feature) ───────────────────────
+const weeklyUsage = {}; // { 'email:feature': { count, weekStart } }
+
+function getWeekStart() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const monday = new Date(now.setDate(diff));
+  monday.setHours(0,0,0,0);
+  return monday.getTime();
+}
+
+function checkWeeklyLimit(email, feature) {
+  const key = email + ':' + feature;
+  const weekStart = getWeekStart();
+  if (!weeklyUsage[key] || weeklyUsage[key].weekStart !== weekStart) {
+    weeklyUsage[key] = { count: 0, weekStart };
+  }
+  return weeklyUsage[key].count;
+}
+
+function incrementWeeklyUsage(email, feature) {
+  const key = email + ':' + feature;
+  const weekStart = getWeekStart();
+  if (!weeklyUsage[key] || weeklyUsage[key].weekStart !== weekStart) {
+    weeklyUsage[key] = { count: 0, weekStart };
+  }
+  weeklyUsage[key].count++;
+  return weeklyUsage[key].count;
+}
+
+const FREE_LIMIT = 3;
+
 async function ensureZappieLabel(gmail) {
   const { data } = await gmail.users.labels.list({ userId: 'me' });
   let label = data.labels.find(l => l.name === 'Zappie');
@@ -241,7 +275,11 @@ app.post('/api/unsubscribe-sender/:id', async (req, res) => {
 app.get('/api/storage', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
-  if (!isPro) return res.status(403).json({ error: 'PRO_REQUIRED', message: 'L\'analyse de stockage est réservée aux membres Pro 🚀' });
+  if (!isPro) {
+    const usedStorage = checkWeeklyLimit(req.session.email, 'storage');
+    if (usedStorage >= FREE_LIMIT) return res.status(429).json({ error: 'FREE_LIMIT', message: 'Limite hebdomadaire atteinte (3/semaine). Passe à Pro pour un accès illimité 🚀', used: usedStorage, limit: FREE_LIMIT });
+    incrementWeeklyUsage(req.session.email, 'storage');
+  }
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 100, q: 'has:attachment larger:1M' });
@@ -261,7 +299,11 @@ app.get('/api/storage', async (req, res) => {
 app.post('/api/archive-old', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
-  if (!isPro) return res.status(403).json({ error: 'PRO_REQUIRED', message: 'L\'archivage automatique est réservé aux membres Pro 🚀' });
+  if (!isPro) {
+    const usedArchive = checkWeeklyLimit(req.session.email, 'archive');
+    if (usedArchive >= FREE_LIMIT) return res.status(429).json({ error: 'FREE_LIMIT', message: 'Limite hebdomadaire atteinte (3/semaine). Passe à Pro pour un accès illimité 🚀', used: usedArchive, limit: FREE_LIMIT });
+    incrementWeeklyUsage(req.session.email, 'archive');
+  }
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const oneYearAgo = new Date();
@@ -284,7 +326,11 @@ app.post('/api/archive-old', async (req, res) => {
 app.get('/api/daily-summary', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
-  if (!isPro) return res.status(403).json({ error: 'PRO_REQUIRED', message: 'Le résumé journalier est réservé aux membres Pro 🚀' });
+  if (!isPro) {
+    const usedSummary = checkWeeklyLimit(req.session.email, 'summary');
+    if (usedSummary >= FREE_LIMIT) return res.status(429).json({ error: 'FREE_LIMIT', message: 'Limite hebdomadaire atteinte (3/semaine). Passe à Pro pour un accès illimité 🚀', used: usedSummary, limit: FREE_LIMIT });
+    incrementWeeklyUsage(req.session.email, 'summary');
+  }
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const today = new Date();
@@ -338,7 +384,11 @@ ${emails.map(e => `- De: ${e.from} | Sujet: ${e.subject} | Aperçu: ${e.snippet}
 app.get('/api/subscriptions', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
-  if (!isPro) return res.status(403).json({ error: 'PRO_REQUIRED', message: 'La gestion des abonnements est réservée aux membres Pro 🚀' });
+  if (!isPro) {
+    const usedSubs = checkWeeklyLimit(req.session.email, 'subscriptions');
+    if (usedSubs >= FREE_LIMIT) return res.status(429).json({ error: 'FREE_LIMIT', message: 'Limite hebdomadaire atteinte (3/semaine). Passe à Pro pour un accès illimité 🚀', used: usedSubs, limit: FREE_LIMIT });
+    incrementWeeklyUsage(req.session.email, 'subscriptions');
+  }
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const queries = [

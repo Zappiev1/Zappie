@@ -235,6 +235,28 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
 .badge-recent{background:rgba(34,197,94,0.15);color:var(--green);font-size:10px;padding:3px 9px;border-radius:100px;font-weight:700;}
 .badge-mid{background:rgba(245,158,11,0.15);color:var(--amber);font-size:10px;padding:3px 9px;border-radius:100px;font-weight:700;}
 
+
+/* ── PRO UPGRADE ─────────────────────────────────────────────────────────── */
+.pro-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.pro-modal-overlay.show{opacity:1;pointer-events:all;}
+.pro-modal{background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:2.5rem;max-width:420px;width:90%;text-align:center;position:relative;box-shadow:0 0 80px rgba(124,92,252,0.3);}
+.pro-modal-icon{font-size:48px;margin-bottom:1rem;}
+.pro-modal-title{font-size:22px;font-weight:900;margin-bottom:8px;letter-spacing:-0.5px;}
+.pro-modal-sub{font-size:14px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
+.pro-modal-features{display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;text-align:left;}
+.pro-modal-feature{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2);}
+.pro-modal-feature span{color:var(--green);}
+.btn-upgrade-modal{width:100%;background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Cabinet Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 0 30px var(--glow);transition:all 0.2s;margin-bottom:10px;}
+.btn-upgrade-modal:hover{transform:translateY(-2px);box-shadow:0 0 50px var(--glow);}
+.btn-modal-close{background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;font-family:'Cabinet Grotesk',sans-serif;}
+.nav-upgrade-btn{background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;border:none;border-radius:100px;padding:7px 16px;font-family:'Cabinet Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 0 15px var(--glow2);transition:all 0.2s;white-space:nowrap;}
+.nav-upgrade-btn:hover{box-shadow:0 0 25px var(--glow);transform:translateY(-1px);}
+.live-locked{position:relative;cursor:pointer;}
+.live-locked-overlay{position:absolute;inset:0;background:rgba(8,8,16,0.6);border-radius:100px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--purple2);font-weight:700;backdrop-filter:blur(2px);}
+.usage-bar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);margin-top:6px;}
+.usage-dots{display:flex;gap:3px;}
+.usage-dot{width:8px;height:8px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);}
+.usage-dot.used{background:var(--purple2);}
 .toast{position:fixed;bottom:2rem;right:2rem;background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;box-shadow:0 8px 32px var(--glow);}
 .toast.show{opacity:1;transform:translateY(-4px);}
 </style>
@@ -246,6 +268,7 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
     <div class="ai-status"><div class="ai-dot"></div>IA Active</div>
     <div class="ai-status" id="live-badge" style="display:none;border-color:rgba(6,182,212,0.4);"><div class="ai-dot" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan)"></div><span id="live-badge-text">⚡ Live Filter actif</span></div>
     <span id="user-email"></span>
+    <button class="nav-upgrade-btn" id="nav-upgrade-btn" style="display:none" onclick="showProModal('Passe à Pro 🚀','Débloque toutes les fonctionnalités illimitées.')">⚡ Passer à Pro</button>
     <button class="btn-logout" onclick="location.href='/auth/logout'">Déconnexion</button>
   </div>
 </nav>
@@ -413,6 +436,25 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
     <div id="subscriptions-result"></div>
   </div>
 </main>
+
+<!-- Pro Upgrade Modal -->
+<div class="pro-modal-overlay" id="pro-modal">
+  <div class="pro-modal">
+    <div class="pro-modal-icon">🚀</div>
+    <div class="pro-modal-title" id="pro-modal-title">Passe à Pro</div>
+    <div class="pro-modal-sub" id="pro-modal-sub">Tu as utilisé tes 3 actions gratuites cette semaine. Passe à Pro pour un accès illimité.</div>
+    <div class="pro-modal-features">
+      <div class="pro-modal-feature"><span>⚡</span> Analyse emails illimitée</div>
+      <div class="pro-modal-feature"><span>☀️</span> Morning Brief illimité</div>
+      <div class="pro-modal-feature"><span>🗄️</span> Nettoyage stockage illimité</div>
+      <div class="pro-modal-feature"><span>🧹</span> Inbox Reset illimité</div>
+      <div class="pro-modal-feature"><span>🌐</span> Scanner vie numérique illimité</div>
+      <div class="pro-modal-feature"><span>🔴</span> Live Filter automatique</div>
+    </div>
+    <button class="btn-upgrade-modal" onclick="location.href='/pricing'">✨ Passer à Pro — 7.99€/mois</button>
+    <button class="btn-modal-close" onclick="closeProModal()">Non merci, rester en Free</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <script>
 var totalCleaned=0,totalAnalyzed=0,allSubs=[];
@@ -431,6 +473,9 @@ async function init(){
   var data=await res.json();
   if(!data.connected){location.href='/';return;}
   document.getElementById('user-email').textContent=data.email;
+  if(!data.isPro) {
+    document.getElementById('nav-upgrade-btn').style.display='block';
+  }
   loadZappieEmails();
   startLiveFilter();
 }
@@ -502,7 +547,9 @@ async function analyzeEmails(){
   scanIdx=0;scanStates.textContent=scanMessages[0];
   scanInterval=setInterval(function(){scanIdx=(scanIdx+1)%scanMessages.length;scanStates.textContent=scanMessages[scanIdx];},1500);
   try{
-    var res=await fetch('/api/analyze',{method:'POST'});
+    var rawRes=await fetch('/api/analyze',{method:'POST'});
+    var res=await handleResponse(rawRes,'analyze');
+    if(!res){clearInterval(scanInterval);scanStates.textContent='';btn.disabled=false;spinner.style.display='none';btnText.textContent='⚡ Analyser mes emails';return;}
     var data=await res.json();
     totalAnalyzed+=data.processed||0;
     totalCleaned+=data.moved||0;
@@ -565,7 +612,9 @@ async function loadStorage(){
   var result=document.getElementById('storage-result');
   result.innerHTML='<div class="empty">🔍 Analyse de tes emails lourds...</div>';
   try{
-    var res=await fetch('/api/storage');
+    var rawRes2=await fetch('/api/storage');
+    var res=await handleResponse(rawRes2,'storage');
+    if(!res){btn.disabled=false;spinner.style.display='none';btnText.textContent='🗄️ Nettoyer mon stockage Gmail';result.innerHTML='';return;}
     if(res.status===403){result.innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';btn.disabled=false;spinner.style.display='none';btnText.textContent='🗄️ Nettoyer mon stockage Gmail';return;}
     var data=await res.json();
     storageEmails=data.emails||[];
@@ -629,7 +678,9 @@ async function archiveOld(){
   var btnText=document.getElementById('btn-archive-text');
   btn.disabled=true;spinner.style.display='block';btnText.textContent='Reset en cours...';
   try{
-    var res=await fetch('/api/archive-old',{method:'POST'});
+    var rawRes3=await fetch('/api/archive-old',{method:'POST'});
+    var res=await handleResponse(rawRes3,'archive');
+    if(!res){btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';return;}
     if(res.status===403){document.getElementById('archive-result').innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';return;}
     var data=await res.json();
     document.getElementById('ba-before-num').textContent=data.archived;
@@ -652,7 +703,9 @@ async function loadSummary(){
   var result=document.getElementById('summary-result');
   result.innerHTML='<div class="empty">🤖 Génération de ton Morning Brief...</div>';
   try{
-    var res=await fetch('/api/daily-summary');
+    var rawRes4=await fetch('/api/daily-summary');
+    var res=await handleResponse(rawRes4,'summary');
+    if(!res){result.innerHTML='';return;}
     if(res.status===403){result.innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';return;}
     var data=await res.json();
     var hero=document.getElementById('brief-hero');
@@ -700,7 +753,9 @@ async function loadSubscriptions(){
   var result=document.getElementById('subscriptions-result');
   result.innerHTML='<div class="empty">🌐 Scan de ton empreinte numérique...</div>';
   try{
-    var res=await fetch('/api/subscriptions');
+    var rawRes5=await fetch('/api/subscriptions');
+    var res=await handleResponse(rawRes5,'subscriptions');
+    if(!res){result.innerHTML='';return;}
     if(res.status===403){result.innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';return;}
     var data=await res.json();
     allSubs=data.subscriptions||[];
@@ -776,6 +831,44 @@ function showToast(msg){
   setTimeout(function(){t.classList.remove('show');},3000);
 }
 
+
+// ── PRO MODAL ────────────────────────────────────────────────────────────────
+function showProModal(title, sub) {
+  if(title) document.getElementById('pro-modal-title').textContent = title;
+  if(sub) document.getElementById('pro-modal-sub').textContent = sub;
+  document.getElementById('pro-modal').classList.add('show');
+}
+function closeProModal() {
+  document.getElementById('pro-modal').classList.remove('show');
+}
+
+// Handle 429 FREE_LIMIT response
+async function handleResponse(res, feature) {
+  if (res.status === 429) {
+    const data = await res.json();
+    showProModal(
+      'Limite hebdomadaire atteinte 🔒',
+      'Tu as utilisé tes 3 actions gratuites cette semaine pour cette fonctionnalité. Reviens lundi ou passe à Pro pour un accès illimité !'
+    );
+    return null;
+  }
+  if (res.status === 403) {
+    showProModal('Fonctionnalité Pro 🚀', 'Cette fonctionnalité est réservée aux membres Pro.');
+    return null;
+  }
+  return res;
+}
+
+// Usage dots display
+function renderUsageDots(used, limit) {
+  var html = '<div class="usage-dots">';
+  for(var i=0;i<limit;i++) {
+    html += '<div class="usage-dot'+(i<used?' used':'')+'"></div>';
+  }
+  html += '</div><span>'+(limit-used)+' restant'+(limit-used>1?'s':'')+' cette semaine</span>';
+  return html;
+}
+
 // ── LIVE AUTO-FILTER (polling 30s, Pro only) ─────────────────────────────────
 var liveFilterInterval = null;
 var liveFilterCount = 0;
@@ -786,7 +879,17 @@ async function startLiveFilter() {
   var res = await fetch('/api/me');
   var data = await res.json();
   isProUser = data.isPro || false;
-  if (!isProUser) return;
+  if (!isProUser) {
+    // Show locked live filter badge
+    var badge = document.getElementById('live-badge');
+    badge.style.display = 'flex';
+    badge.style.borderColor = 'rgba(124,92,252,0.3)';
+    badge.style.cursor = 'pointer';
+    badge.style.opacity = '0.6';
+    badge.onclick = function() { showProModal('⚡ Live Filter — Fonctionnalité Pro', 'Le filtre automatique en temps réel est réservé aux membres Pro. Tes emails inutiles seront filtrés instantanément dès leur arrivée.'); };
+    document.getElementById('live-badge-text').textContent = '🔒 Live Filter (Pro)';
+    return;
+  }
 
   // Show live badge
   document.getElementById('live-badge').style.display = 'flex';
