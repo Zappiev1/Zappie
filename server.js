@@ -623,3 +623,4 @@ app.get('/api/subscription-status', async (req, res) => {
 
 // Page pricing
 app.get('/pricing', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pricing.html')));
+ 
