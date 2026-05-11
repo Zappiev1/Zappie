@@ -296,6 +296,19 @@ app.get('/api/storage', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/api/archive-count', async (req, res) => {
+  if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const gmail = await getGmailClient(req.session.tokens);
+    const months = parseInt(req.query.months) || 6;
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - months);
+    const dateStr = `${cutoff.getFullYear()}/${String(cutoff.getMonth()+1).padStart(2,'0')}/${String(cutoff.getDate()).padStart(2,'0')}`;
+    const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: `in:inbox before:${dateStr}` });
+    res.json({ count: data.resultSizeEstimate || 0, months });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/archive-old', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
@@ -306,8 +319,9 @@ app.post('/api/archive-old', async (req, res) => {
   }
   try {
     const gmail = await getGmailClient(req.session.tokens);
+    const months = parseInt(req.query.months) || 6;
     const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    oneYearAgo.setMonth(oneYearAgo.getMonth() - months);
     const dateStr = `${oneYearAgo.getFullYear()}/${String(oneYearAgo.getMonth()+1).padStart(2,'0')}/${String(oneYearAgo.getDate()).padStart(2,'0')}`;
 
     // Count first

@@ -182,6 +182,10 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
    ARCHIVE — Inbox Reset
 ═══════════════════════════════════════════ */
 .archive-hero{border-radius:24px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(124,92,252,0.12),rgba(6,182,212,0.06));border:1px solid var(--border);}
+.archive-period-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem;}
+.period-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:8px 18px;border-radius:100px;font-family:'Cabinet Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.period-btn:hover{border-color:var(--purple);color:var(--purple2);}
+.period-btn.active{background:rgba(124,92,252,0.2);border-color:var(--purple);color:var(--purple2);}
 .archive-hero::before{content:'';position:absolute;bottom:-40px;left:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,92,252,0.1),transparent 70%);pointer-events:none;}
 .archive-title{font-size:26px;font-weight:900;letter-spacing:-0.5px;margin-bottom:8px;}
 .archive-subtitle{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:1.5rem;max-width:480px;}
@@ -365,7 +369,17 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
   <div class="tab-content" id="tab-archive">
     <div class="archive-hero">
       <div class="archive-title">🧹 Inbox Reset</div>
-      <div class="archive-subtitle">Repartir à zéro. Zappie archive tous tes vieux emails et ne garde que ce qui est récent dans ta boîte principale. Ta vie numérique, remise à neuf.</div>
+      <div class="archive-subtitle">Choisis la periode et Zappie archive tout en 1 clic.</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;margin-top:1.5rem;">Archiver les emails de plus de :</div>
+      <div class="archive-period-btns">
+        <button class="period-btn" onclick="selectPeriod(this,1)">1 mois</button>
+        <button class="period-btn" onclick="selectPeriod(this,2)">2 mois</button>
+        <button class="period-btn" onclick="selectPeriod(this,3)">3 mois</button>
+        <button class="period-btn active" onclick="selectPeriod(this,6)">6 mois</button>
+        <button class="period-btn" onclick="selectPeriod(this,12)">1 an</button>
+        <button class="period-btn" onclick="selectPeriod(this,24)">2 ans</button>
+      </div>
+      <div class="archive-subtitle" style="display:none à zéro. Zappie archive tous tes vieux emails et ne garde que ce qui est récent dans ta boîte principale. Ta vie numérique, remise à neuf.</div>
       <div class="before-after">
         <div class="ba-box ba-before">
           <div class="ba-label">📬 Avant</div>
@@ -461,11 +475,32 @@ var totalCleaned=0,totalAnalyzed=0,allSubs=[];
 var scanMessages=['🔍 Détection des newsletters...','📊 Analyse des promotions...','🤖 Identification des spams...','✨ Tri intelligent en cours...','📁 Rangement automatique...'];
 var scanIdx=0,scanInterval=null,storageEmails=[];
 
+
+var selectedPeriod=6;
+function selectPeriod(btn,months){
+  selectedPeriod=months;
+  document.querySelectorAll('.period-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  loadArchiveCount();
+}
+async function loadArchiveCount(){
+  try{
+    var m=selectedPeriod||6;
+    var label=m>=12?(m/12)+' an'+(m>12?'s':''):m+' mois';
+    var r=await fetch('/api/archive-count?months='+m);
+    var d=await r.json();
+    var c=d.count||0;
+    document.getElementById('ba-before-num').textContent=c;
+    document.getElementById('ba-before-sub').textContent=c+' emails de +'+label+' detectes';
+    document.getElementById('archive-insight').innerHTML='🤖 <strong>Zappie a detecte</strong> <strong style="color:var(--red)">'+c+' emails</strong> de plus de '+label+'. Tout sera archive en 1 clic, rien ne sera supprime.';
+  }catch(e){}
+}
 function switchTab(tab){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
   document.getElementById('tab-btn-'+tab).classList.add('active');
   document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='archive') loadArchiveCount();
 }
 
 async function init(){
@@ -678,22 +713,22 @@ async function archiveOld(){
   var btnText=document.getElementById('btn-archive-text');
   btn.disabled=true;spinner.style.display='block';btnText.textContent='Reset en cours...';
   try{
-    var rawRes3=await fetch('/api/archive-old',{method:'POST'});
+    var rawRes3=await fetch('/api/archive-old?months='+selectedPeriod,{method:'POST'});
     var res=await handleResponse(rawRes3,'archive');
     if(!res){btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';return;}
     if(res.status===403){document.getElementById('archive-result').innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';return;}
     var data=await res.json();
-    document.getElementById('ba-before-num').textContent=data.archived;
+    document.getElementById('ba-before-num').textContent=data.archived||0;
     document.getElementById('ba-after-num').textContent='✓';
-    document.getElementById('archive-insight').innerHTML='🤖 <strong>Reset effectué !</strong> '+data.archived+' vieux emails archivés. Ta boîte principale ne contient plus que tes emails récents. Tout reste accessible via la recherche Gmail.';
+    document.getElementById('archive-insight').innerHTML='🤖 <strong>Reset effectué !</strong> '+data.archived||0+' vieux emails archivés. Ta boîte principale ne contient plus que tes emails récents. Tout reste accessible via la recherche Gmail.';
     document.getElementById('archive-result').innerHTML=
       '<div class="archive-result-box">'+
-      '<div class="archive-big-num">'+data.archived+'</div>'+
+      '<div class="archive-big-num">'+data.archived||0+'</div>'+
       '<div class="archive-label">emails archivés avec succès ✨</div>'+
       '<div class="archive-years">Des années d\'accumulation nettoyées — accessible via la recherche Gmail</div>'+
       '<div class="inbox-zen-badge">🟢 Inbox Zen débloqué</div>'+
       '</div>';
-    showToast('🎉 Inbox Reset terminé — '+data.archived+' emails archivés !');
+    showToast('🎉 Inbox Reset terminé — '+data.archived||0+' emails archivés !');
   }catch(e){showToast('❌ Erreur lors du reset');}
   btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';
 }
