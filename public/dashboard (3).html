@@ -889,16 +889,13 @@ function closeProModal() {
 
 // Handle 429 FREE_LIMIT response
 async function handleResponse(res, feature) {
-  if (res.status === 429) {
-    const data = await res.json();
-    showProModal(
-      'Limite hebdomadaire atteinte 🔒',
-      'Tu as utilisé tes 3 actions gratuites cette semaine pour cette fonctionnalité. Reviens lundi ou passe à Pro pour un accès illimité !'
-    );
-    return null;
-  }
-  if (res.status === 403) {
-    showProModal('Fonctionnalité Pro 🚀', 'Cette fonctionnalité est réservée aux membres Pro.');
+  if (res.status === 429 || res.status === 403) {
+    try { var d = await res.json(); } catch(e) { var d = {}; }
+    if (res.status === 429) {
+      showProModal('Limite hebdomadaire atteinte 🔒', 'Tu as utilisé tes 3 actions gratuites cette semaine. Reviens lundi ou passe à Pro pour un accès illimité !');
+    } else {
+      showProModal('Fonctionnalité Pro 🚀', 'Cette fonctionnalité est réservée aux membres Pro.');
+    }
     return null;
   }
   return res;
