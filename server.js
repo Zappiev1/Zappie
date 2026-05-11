@@ -581,7 +581,7 @@ app.post('/api/auto-filter', async (req, res) => {
 app.listen(PORT, () => console.log(`✅ Zappie tourne sur http://localhost:${PORT}`));
 
 // ─── STRIPE PAIEMENT ──────────────────────────────────────────────────────────
-const PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_1TVZVV5XAZHLam3soJRrAs8A';
+const PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_1TVchf8UsIPkunXGdzoJWrOo';
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
 // Créer une session de paiement Stripe
