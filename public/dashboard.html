@@ -105,56 +105,135 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
 .btn-primary{background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;box-shadow:0 0 20px var(--glow2);}
 .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
 
-/* Storage */
-.storage-hero{background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(245,158,11,0.05));border:1px solid rgba(239,68,68,0.2);border-radius:16px;padding:1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-.storage-metric{text-align:center;}
-.storage-metric-num{font-size:28px;font-weight:900;color:var(--red);}
-.storage-metric-label{font-size:12px;color:var(--text2);margin-top:2px;}
-.storage-bar-bg{height:10px;background:var(--bg3);border-radius:100px;overflow:hidden;margin:1rem 0 0.5rem;}
-.storage-bar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--green),var(--amber),var(--red));transition:width 1s ease;}
-.storage-insight{font-size:12px;color:var(--text2);text-align:center;}
-.email-size{font-size:11px;color:var(--red);margin-top:2px;}
-
-/* Archive */
-.archive-hero{background:linear-gradient(135deg,rgba(124,92,252,0.1),rgba(6,182,212,0.05));border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;}
-.archive-hero h3{font-size:18px;font-weight:800;margin-bottom:6px;}
-.archive-hero p{font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6;}
-.safety-badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;}
-.safety-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green);background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);padding:4px 10px;border-radius:100px;}
-.archive-result-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.5rem;text-align:center;}
-.archive-big-num{font-size:52px;font-weight:900;color:var(--purple2);}
-.archive-label{font-size:14px;color:var(--text2);margin-top:4px;}
-
-/* Summary */
-.summary-intro{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
-.summary-score{display:inline-block;font-size:13px;color:var(--text2);margin-bottom:1.5rem;}
-.summary-cards{display:flex;flex-direction:column;gap:10px;}
-.summary-card{background:var(--bg2);border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-left:3px solid var(--border2);}
-.summary-card.urgent{border-left-color:var(--red);}
-.summary-card.important{border-left-color:var(--amber);}
-.summary-card.info{border-left-color:var(--cyan);}
-.summary-card-left{flex:1;}
-.summary-cat{font-size:11px;color:var(--text2);margin-bottom:4px;}
-.summary-title{font-size:14px;font-weight:700;}
-.summary-from{font-size:11px;color:var(--text3);margin-top:2px;}
-.summary-action{font-size:11px;padding:4px 10px;border-radius:100px;white-space:nowrap;flex-shrink:0;}
+/* ═══════════════════════════════════════════
+   MORNING BRIEF
+═══════════════════════════════════════════ */
+.brief-hero{background:linear-gradient(135deg,rgba(124,92,252,0.14),rgba(6,182,212,0.07));border:1px solid var(--border);border-radius:24px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;}
+.brief-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,92,252,0.15),transparent 70%);pointer-events:none;}
+.brief-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;}
+.brief-greeting{font-size:24px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;}
+.brief-subtext{font-size:13px;color:var(--text2);line-height:1.6;max-width:420px;}
+.brief-badges{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
+.brief-load-badge{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:8px 16px;border-radius:100px;}
+.load-low{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3);}
+.load-med{background:rgba(245,158,11,0.15);color:var(--amber);border:1px solid rgba(245,158,11,0.3);}
+.load-high{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
+.brief-read-time{font-size:11px;color:var(--text3);}
+.brief-stats-row{display:flex;gap:10px;flex-wrap:wrap;}
+.brief-mini-stat{background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:12px;padding:10px 16px;text-align:center;flex:1;min-width:80px;}
+.brief-mini-num{font-size:22px;font-weight:900;line-height:1;}
+.brief-mini-label{font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em;}
+.brief-section-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em;margin:1.5rem 0 10px;}
+.brief-cards{display:flex;flex-direction:column;gap:10px;}
+.brief-card{border-radius:16px;padding:1.1rem 1.25rem;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;transition:all 0.2s;cursor:default;border:1px solid transparent;}
+.brief-card:hover{transform:translateX(4px);}
+.brief-card.urgent{background:rgba(239,68,68,0.07);border-color:rgba(239,68,68,0.2);border-left:3px solid var(--red);}
+.brief-card.important{background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2);border-left:3px solid var(--amber);}
+.brief-card.info{background:var(--bg2);border-color:var(--border2);border-left:3px solid var(--cyan);}
+.brief-priority-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.dot-urgent{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,0.5);}
+.dot-important{background:var(--amber);box-shadow:0 0 8px rgba(245,158,11,0.5);}
+.dot-info{background:var(--cyan);}
+.brief-card-cat{font-size:11px;color:var(--text2);margin-bottom:3px;}
+.brief-card-title{font-size:14px;font-weight:700;line-height:1.3;}
+.brief-card-from{font-size:11px;color:var(--text3);margin-top:3px;}
+.brief-card-action{font-size:11px;padding:5px 12px;border-radius:100px;white-space:nowrap;font-weight:600;flex-shrink:0;}
 .action-urgent{background:rgba(239,68,68,0.15);color:var(--red);}
 .action-important{background:rgba(245,158,11,0.15);color:var(--amber);}
 .action-none{background:var(--bg3);color:var(--text3);}
 
-/* Subscriptions */
-.privacy-score{background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(124,92,252,0.08));border:1px solid rgba(239,68,68,0.2);border-radius:16px;padding:1.5rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
-.privacy-left h3{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
-.privacy-num{font-size:42px;font-weight:900;color:var(--red);}
-.privacy-label{font-size:12px;color:var(--text2);}
+/* ═══════════════════════════════════════════
+   STOCKAGE
+═══════════════════════════════════════════ */
+.storage-dashboard{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.5rem;}
+@media(max-width:600px){.storage-dashboard{grid-template-columns:1fr;}}
+.storage-hero-card{background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(245,158,11,0.06));border:1px solid rgba(239,68,68,0.25);border-radius:20px;padding:1.5rem;position:relative;overflow:hidden;}
+.storage-hero-card::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(239,68,68,0.15),transparent 70%);pointer-events:none;}
+.storage-health-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+.storage-health-score{font-size:28px;font-weight:900;line-height:1;margin-bottom:4px;}
+.health-bad{color:var(--red);}
+.health-med{color:var(--amber);}
+.health-good{color:var(--green);}
+.storage-health-status{font-size:12px;color:var(--text2);margin-bottom:1.2rem;}
+.storage-bar-bg{height:8px;background:rgba(255,255,255,0.06);border-radius:100px;overflow:hidden;margin-bottom:6px;}
+.storage-bar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--green),var(--amber),var(--red));transition:width 1.2s ease;}
+.storage-bar-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);}
+.storage-equiv-card{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:1.5rem;display:flex;flex-direction:column;justify-content:center;}
+.storage-equiv-icon{font-size:36px;margin-bottom:10px;}
+.storage-equiv-text{font-size:16px;font-weight:800;margin-bottom:4px;line-height:1.3;}
+.storage-equiv-sub{font-size:12px;color:var(--text2);}
+.storage-metrics-row{display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap;}
+.storage-metric-pill{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:1rem 1.25rem;flex:1;min-width:120px;}
+.storage-metric-num{font-size:24px;font-weight:900;line-height:1;margin-bottom:3px;}
+.storage-metric-label{font-size:11px;color:var(--text3);}
+.storage-insight-bar{background:linear-gradient(135deg,rgba(124,92,252,0.08),transparent);border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:13px;color:var(--text2);line-height:1.6;}
+.storage-insight-bar strong{color:var(--purple2);}
+.storage-actions-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem;}
+.btn-storage-action{background:var(--bg2);border:1px solid rgba(239,68,68,0.3);color:var(--red);padding:8px 16px;border-radius:10px;font-size:12px;font-family:'Cabinet Grotesk',sans-serif;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-storage-action:hover{background:rgba(239,68,68,0.1);}
+.email-size{font-size:11px;color:var(--red);margin-top:2px;}
+.storage-cat-badge{font-size:10px;padding:2px 8px;border-radius:100px;font-weight:700;margin-left:6px;}
+.cat-pdf{background:rgba(239,68,68,0.15);color:var(--red);}
+.cat-img{background:rgba(6,182,212,0.15);color:var(--cyan);}
+.cat-vid{background:rgba(124,92,252,0.15);color:var(--purple2);}
+.cat-doc{background:rgba(245,158,11,0.15);color:var(--amber);}
+
+/* ═══════════════════════════════════════════
+   ARCHIVE — Inbox Reset
+═══════════════════════════════════════════ */
+.archive-hero{border-radius:24px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(124,92,252,0.12),rgba(6,182,212,0.06));border:1px solid var(--border);}
+.archive-hero::before{content:'';position:absolute;bottom:-40px;left:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,92,252,0.1),transparent 70%);pointer-events:none;}
+.archive-title{font-size:26px;font-weight:900;letter-spacing:-0.5px;margin-bottom:8px;}
+.archive-subtitle{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:1.5rem;max-width:480px;}
+.before-after{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:1.5rem;}
+.ba-box{background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:16px;padding:1.25rem;text-align:center;}
+.ba-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+.ba-num{font-size:36px;font-weight:900;letter-spacing:-1px;line-height:1;}
+.ba-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+.ba-arrow{font-size:24px;color:var(--purple2);text-align:center;}
+.ba-after .ba-num{color:var(--green);}
+.ba-before .ba-num{color:var(--red);}
+.archive-safety{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem;}
+.safety-pill{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green);background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);padding:5px 12px;border-radius:100px;font-weight:600;}
+.archive-insight{background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
+.archive-insight strong{color:var(--purple2);}
+.archive-result-box{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:2rem;text-align:center;margin-top:1.5rem;}
+.archive-big-num{font-size:64px;font-weight:900;letter-spacing:-3px;color:var(--purple2);line-height:1;animation:countPop 0.5s ease;}
+@keyframes countPop{0%{transform:scale(0.7);opacity:0;}100%{transform:scale(1);opacity:1;}}
+.archive-label{font-size:15px;color:var(--text2);margin-top:8px;}
+.archive-years{font-size:13px;color:var(--text3);margin-top:6px;}
+.inbox-zen-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);color:var(--green);font-size:13px;font-weight:700;padding:8px 20px;border-radius:100px;margin-top:16px;}
+
+/* ═══════════════════════════════════════════
+   EMPREINTE NUMERIQUE
+═══════════════════════════════════════════ */
+.footprint-hero{background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(124,92,252,0.08));border:1px solid rgba(239,68,68,0.2);border-radius:24px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;}
+.footprint-hero::before{content:'';position:absolute;top:-30px;right:-30px;width:180px;height:180px;background:radial-gradient(circle,rgba(239,68,68,0.1),transparent 70%);pointer-events:none;}
+.footprint-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;}
+.footprint-left h2{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+.footprint-big-num{font-size:56px;font-weight:900;letter-spacing:-2px;line-height:1;color:var(--red);}
+.footprint-sub{font-size:13px;color:var(--text2);margin-top:4px;}
+.exposure-badge{font-size:14px;font-weight:700;padding:10px 18px;border-radius:100px;}
+.exposure-high{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
+.exposure-med{background:rgba(245,158,11,0.15);color:var(--amber);border:1px solid rgba(245,158,11,0.3);}
+.exposure-low{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3);}
+.footprint-stats-row{display:flex;gap:10px;flex-wrap:wrap;}
+.fp-stat{background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:12px;padding:10px 16px;flex:1;min-width:80px;text-align:center;}
+.fp-stat-num{font-size:20px;font-weight:900;line-height:1;}
+.fp-stat-label{font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.04em;}
+.footprint-ai-insight{background:rgba(124,92,252,0.08);border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1.5rem;}
+.footprint-ai-insight strong{color:var(--purple2);}
 .cat-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;}
-.cat-btn{background:var(--bg2);border:1px solid var(--border2);border-radius:100px;padding:5px 12px;font-size:11px;font-family:'Cabinet Grotesk',sans-serif;color:var(--text2);cursor:pointer;transition:all 0.2s;}
+.cat-btn{background:var(--bg2);border:1px solid var(--border2);border-radius:100px;padding:6px 14px;font-size:11px;font-family:'Cabinet Grotesk',sans-serif;color:var(--text2);cursor:pointer;transition:all 0.2s;font-weight:600;}
 .cat-btn.active{background:rgba(124,92,252,0.2);border-color:var(--purple);color:var(--purple2);}
-.sub-domain{font-size:13px;font-weight:700;}
-.sub-category{font-size:11px;color:var(--text2);margin-top:2px;}
+.sub-item{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:all 0.2s;margin-bottom:8px;}
+.sub-item:hover{border-color:var(--border);}
+.sub-domain{font-size:14px;font-weight:700;}
+.sub-category{font-size:11px;color:var(--text2);margin-top:3px;}
 .sub-date{font-size:11px;color:var(--text3);margin-top:2px;}
-.badge-old{background:rgba(239,68,68,0.15);color:var(--red);font-size:10px;padding:2px 8px;border-radius:100px;}
-.badge-recent{background:rgba(34,197,94,0.15);color:var(--green);font-size:10px;padding:2px 8px;border-radius:100px;}
+.badge-old{background:rgba(239,68,68,0.15);color:var(--red);font-size:10px;padding:3px 9px;border-radius:100px;font-weight:700;}
+.badge-recent{background:rgba(34,197,94,0.15);color:var(--green);font-size:10px;padding:3px 9px;border-radius:100px;font-weight:700;}
+.badge-mid{background:rgba(245,158,11,0.15);color:var(--amber);font-size:10px;padding:3px 9px;border-radius:100px;font-weight:700;}
 
 .toast{position:fixed;bottom:2rem;right:2rem;background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;box-shadow:0 8px 32px var(--glow);}
 .toast.show{opacity:1;transform:translateY(-4px);}
@@ -165,6 +244,7 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
   <div class="logo"><div class="logo-icon">⚡</div>Zappie</div>
   <div class="nav-right">
     <div class="ai-status"><div class="ai-dot"></div>IA Active</div>
+    <div class="ai-status" id="live-badge" style="display:none;border-color:rgba(6,182,212,0.4);"><div class="ai-dot" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan)"></div><span id="live-badge-text">⚡ Live Filter actif</span></div>
     <span id="user-email"></span>
     <button class="btn-logout" onclick="location.href='/auth/logout'">Déconnexion</button>
   </div>
@@ -193,6 +273,7 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
     <div class="stat-card"><div class="stat-icon ic-c">⏱️</div><div class="stat-num cn-c" id="stat-time">0 min</div><div class="stat-label">Temps économisé</div><div class="stat-glow" style="background:var(--cyan)"></div></div>
     <div class="stat-card"><div class="stat-icon ic-a">📁</div><div class="stat-num cn-a" id="stat-total">0</div><div class="stat-label">Total dans Zappie</div><div class="stat-glow" style="background:var(--amber)"></div></div>
     <div class="stat-card"><div class="stat-icon ic-r">🔒</div><div class="stat-num cn-r" id="stat-subs">0</div><div class="stat-label">Comptes détectés</div><div class="stat-glow" style="background:var(--red)"></div></div>
+    <div class="stat-card" id="live-stat-card" style="display:none;border-color:rgba(6,182,212,0.3);"><div class="stat-icon ic-c">⚡</div><div class="stat-num cn-c" id="stat-live">0</div><div class="stat-label">Filtrés en live</div><div class="stat-glow" style="background:var(--cyan)"></div></div>
   </div>
 
   <div class="insights-bar" id="insights-bar">
@@ -212,9 +293,9 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
   <div class="tabs">
     <button class="tab active" id="tab-btn-tri" onclick="switchTab('tri')">⚡ Nettoyés</button>
     <button class="tab" id="tab-btn-stockage" onclick="switchTab('stockage')">🗄️ Stockage</button>
-    <button class="tab" id="tab-btn-archive" onclick="switchTab('archive')">📦 Inbox Detox</button>
-    <button class="tab" id="tab-btn-resume" onclick="switchTab('resume')">☀️ Brief IA</button>
-    <button class="tab" id="tab-btn-inscriptions" onclick="switchTab('inscriptions')">🔍 Vie numérique</button>
+    <button class="tab" id="tab-btn-archive" onclick="switchTab('archive')">🧹 Inbox Reset</button>
+    <button class="tab" id="tab-btn-resume" onclick="switchTab('resume')">☀️ Morning Brief</button>
+    <button class="tab" id="tab-btn-inscriptions" onclick="switchTab('inscriptions')">🌐 Empreinte</button>
   </div>
 
   <!-- Tri -->
@@ -225,57 +306,110 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
 
   <!-- Stockage -->
   <div class="tab-content" id="tab-stockage">
-    <div class="storage-hero" id="storage-hero" style="display:none">
-      <div class="storage-metric"><div class="storage-metric-num" id="storage-size">—</div><div class="storage-metric-label">Espace récupérable</div></div>
-      <div class="storage-metric"><div class="storage-metric-num" id="storage-count">—</div><div class="storage-metric-label">Gros emails détectés</div></div>
-      <div style="grid-column:1/-1">
-        <div class="storage-bar-bg"><div class="storage-bar-fill" id="storage-bar" style="width:0%"></div></div>
-        <div class="storage-insight" id="storage-equivalent"></div>
+    <div id="storage-hero-section" style="display:none">
+      <div class="storage-dashboard">
+        <div class="storage-hero-card">
+          <div class="storage-health-label">Storage Health Score</div>
+          <div class="storage-health-score" id="storage-health-score">—</div>
+          <div class="storage-health-status" id="storage-health-status">Lance le scan pour analyser</div>
+          <div class="storage-bar-bg"><div class="storage-bar-fill" id="storage-bar" style="width:0%"></div></div>
+          <div class="storage-bar-labels"><span>0 MB</span><span id="storage-bar-label">—</span></div>
+        </div>
+        <div class="storage-equiv-card">
+          <div class="storage-equiv-icon" id="storage-equiv-icon">📸</div>
+          <div class="storage-equiv-text" id="storage-equiv-text">Lance le scan</div>
+          <div class="storage-equiv-sub" id="storage-equiv-sub">pour voir l'impact</div>
+        </div>
+      </div>
+      <div class="storage-metrics-row">
+        <div class="storage-metric-pill"><div class="storage-metric-num cn-r" id="storage-size">—</div><div class="storage-metric-label">Espace récupérable</div></div>
+        <div class="storage-metric-pill"><div class="storage-metric-num cn-a" id="storage-count">—</div><div class="storage-metric-label">Gros emails détectés</div></div>
+        <div class="storage-metric-pill"><div class="storage-metric-num cn-g" id="storage-gain">—</div><div class="storage-metric-label">Gain potentiel</div></div>
+      </div>
+      <div class="storage-insight-bar" id="storage-insight-bar"></div>
+      <div class="storage-actions-row">
+        <button class="btn-storage-action" onclick="deleteAllStorage()">🗑 Supprimer tous les gros emails</button>
       </div>
     </div>
-    <button class="btn btn-primary" onclick="loadStorage()">🗄️ Scanner mon stockage</button>
+    <button class="btn btn-primary" id="btn-storage" onclick="loadStorage()">
+      <div class="spinner" id="spinner-storage"></div>
+      <span id="btn-storage-text">🗄️ Nettoyer mon stockage Gmail</span>
+    </button>
     <div id="storage-result"></div>
   </div>
 
   <!-- Archive -->
   <div class="tab-content" id="tab-archive">
     <div class="archive-hero">
-      <h3>🧹 Inbox Detox — Repartir à zéro</h3>
-      <p>Archive automatiquement tous les emails de plus d'1 an. Ta boîte principale ne gardera que ce qui est récent et important.</p>
-      <div class="safety-badges">
-        <div class="safety-badge">✅ Rien n'est supprimé</div>
-        <div class="safety-badge">✅ Tout reste dans Gmail</div>
-        <div class="safety-badge">✅ Restaurable à tout moment</div>
-        <div class="safety-badge">✅ Accessible via recherche Gmail</div>
+      <div class="archive-title">🧹 Inbox Reset</div>
+      <div class="archive-subtitle">Repartir à zéro. Zappie archive tous tes vieux emails et ne garde que ce qui est récent dans ta boîte principale. Ta vie numérique, remise à neuf.</div>
+      <div class="before-after">
+        <div class="ba-box ba-before">
+          <div class="ba-label">📬 Avant</div>
+          <div class="ba-num" id="ba-before-num">?</div>
+          <div class="ba-sub">emails vieux d'1 an+</div>
+        </div>
+        <div class="ba-arrow">→</div>
+        <div class="ba-box ba-after">
+          <div class="ba-label">✨ Après</div>
+          <div class="ba-num" id="ba-after-num">0</div>
+          <div class="ba-sub">archivés, inbox propre</div>
+        </div>
+      </div>
+      <div class="archive-insight" id="archive-insight">
+        🤖 <strong>Zappie détecte</strong> tous les emails de plus d'1 an dans ton inbox. Promotions, notifications, vieux reçus — tout sera archivé. Rien n'est supprimé, tout reste accessible via la recherche Gmail.
+      </div>
+      <div class="archive-safety">
+        <div class="safety-pill">✅ Rien n'est supprimé</div>
+        <div class="safety-pill">✅ Tout reste dans Gmail</div>
+        <div class="safety-pill">✅ Restaurable à tout moment</div>
+        <div class="safety-pill">✅ Accessible via recherche Gmail</div>
       </div>
     </div>
     <button class="btn btn-primary" id="btn-archive" onclick="archiveOld()">
       <div class="spinner" id="spinner-archive"></div>
-      <span id="btn-archive-text">🧹 Lancer l'Inbox Detox</span>
+      <span id="btn-archive-text">🧹 Repartir avec une inbox propre</span>
     </button>
     <div id="archive-result"></div>
   </div>
 
-  <!-- Resume -->
+  <!-- Morning Brief -->
   <div class="tab-content" id="tab-resume">
+    <div class="brief-hero" id="brief-hero" style="display:none">
+      <div class="brief-top">
+        <div>
+          <div class="brief-greeting" id="brief-greeting">Bonjour 👋</div>
+          <div class="brief-subtext" id="brief-subtext">Voici ce qui compte aujourd'hui dans ta boîte mail.</div>
+        </div>
+        <div class="brief-badges">
+          <div class="brief-load-badge load-low" id="brief-load-badge">—</div>
+          <div class="brief-read-time" id="brief-read-time">⏱ 30 sec de lecture</div>
+        </div>
+      </div>
+      <div class="brief-stats-row" id="brief-stats-row"></div>
+    </div>
     <button class="btn btn-primary" onclick="loadSummary()">☀️ Générer mon Morning Brief</button>
     <div id="summary-result"></div>
   </div>
 
-  <!-- Inscriptions -->
+  <!-- Empreinte Numérique -->
   <div class="tab-content" id="tab-inscriptions">
-    <div class="privacy-score" id="privacy-score-box" style="display:none">
-      <div class="privacy-left">
-        <h3>Empreinte numérique</h3>
-        <div class="privacy-num" id="privacy-num">0</div>
-        <div class="privacy-label" id="privacy-label">comptes détectés</div>
+    <div class="footprint-hero" id="footprint-hero" style="display:none">
+      <div class="footprint-top">
+        <div class="footprint-left">
+          <h2>Empreinte numérique</h2>
+          <div class="footprint-big-num" id="footprint-num">0</div>
+          <div class="footprint-sub" id="footprint-sub">comptes détectés</div>
+        </div>
+        <div>
+          <div class="exposure-badge" id="exposure-badge">—</div>
+        </div>
       </div>
-      <div style="flex:1;min-width:150px">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px" id="privacy-risk">Calcul du risque...</div>
-        <div class="cat-filter" id="cat-filter"></div>
-      </div>
+      <div class="footprint-stats-row" id="footprint-stats-row"></div>
     </div>
-    <button class="btn btn-primary" onclick="loadSubscriptions()">🔍 Scanner ma vie numérique</button>
+    <div class="footprint-ai-insight" id="footprint-insight" style="display:none"></div>
+    <button class="btn btn-primary" onclick="loadSubscriptions()">🌐 Scanner mon empreinte numérique</button>
+    <div class="cat-filter" id="cat-filter"></div>
     <div id="subscriptions-result"></div>
   </div>
 </main>
@@ -283,7 +417,7 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
 <script>
 var totalCleaned=0,totalAnalyzed=0,allSubs=[];
 var scanMessages=['🔍 Détection des newsletters...','📊 Analyse des promotions...','🤖 Identification des spams...','✨ Tri intelligent en cours...','📁 Rangement automatique...'];
-var scanIdx=0,scanInterval=null;
+var scanIdx=0,scanInterval=null,storageEmails=[];
 
 function switchTab(tab){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
@@ -298,6 +432,7 @@ async function init(){
   if(!data.connected){location.href='/';return;}
   document.getElementById('user-email').textContent=data.email;
   loadZappieEmails();
+  startLiveFilter();
 }
 
 async function loadZappieEmails(){
@@ -406,23 +541,60 @@ async function deleteEmail(id){
   showToast('🗑 Email supprimé !');
 }
 
+// ── STOCKAGE ──────────────────────────────────
+function getStorageCatBadge(subject,from){
+  var s=(subject+from).toLowerCase();
+  if(s.includes('pdf')) return '<span class="storage-cat-badge cat-pdf">📄 PDF</span>';
+  if(s.includes('photo')||s.includes('image')||s.includes('jpg')||s.includes('png')) return '<span class="storage-cat-badge cat-img">🖼️ Photo</span>';
+  if(s.includes('video')||s.includes('mp4')||s.includes('mov')) return '<span class="storage-cat-badge cat-vid">🎥 Vidéo</span>';
+  return '<span class="storage-cat-badge cat-doc">📦 Pièce jointe</span>';
+}
+
+function bytesToEquiv(bytes){
+  var mb=bytes/(1024*1024);
+  if(mb>1000) return {icon:'🎬',text:'Assez pour '+Math.round(mb/700)+' films HD',sub:(mb/1024).toFixed(1)+' GB récupérables'};
+  if(mb>200) return {icon:'📸',text:'Assez pour '+Math.round(mb/4)+' photos',sub:Math.round(mb)+' MB récupérables'};
+  return {icon:'📧',text:'Équivaut à '+Math.round(mb/0.075)+' emails normaux',sub:Math.round(mb)+' MB récupérables'};
+}
+
 async function loadStorage(){
+  var btn=document.getElementById('btn-storage');
+  var spinner=document.getElementById('spinner-storage');
+  var btnText=document.getElementById('btn-storage-text');
+  btn.disabled=true;spinner.style.display='block';btnText.textContent='Scan en cours...';
   var result=document.getElementById('storage-result');
-  result.innerHTML='<div class="empty">🔍 Scan en cours...</div>';
+  result.innerHTML='<div class="empty">🔍 Analyse de tes emails lourds...</div>';
   try{
     var res=await fetch('/api/storage');
+    if(res.status===403){result.innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';btn.disabled=false;spinner.style.display='none';btnText.textContent='🗄️ Nettoyer mon stockage Gmail';return;}
     var data=await res.json();
-    if(!data.emails.length){result.innerHTML='<div class="empty">🎉 Aucun gros email trouvé !</div>';return;}
-    var hero=document.getElementById('storage-hero');
-    hero.style.display='grid';
+    storageEmails=data.emails||[];
+    if(!storageEmails.length){result.innerHTML='<div class="empty">🎉 Aucun gros email trouvé !</div>';btn.disabled=false;spinner.style.display='none';btnText.textContent='🗄️ Nettoyer mon stockage Gmail';return;}
+    var hero=document.getElementById('storage-hero-section');
+    hero.style.display='block';
+    var totalMB=data.totalSize/(1024*1024);
+    var equiv=bytesToEquiv(data.totalSize);
+    var healthPct=Math.min(95,Math.round(totalMB/50));
+    var healthScore=healthPct>70?'🔴 Saturé':healthPct>40?'🟠 Chargé':'🟢 Sain';
+    var healthClass=healthPct>70?'health-bad':healthPct>40?'health-med':'health-good';
+    document.getElementById('storage-health-score').textContent=healthScore;
+    document.getElementById('storage-health-score').className='storage-health-score '+healthClass;
+    document.getElementById('storage-health-status').textContent=healthPct>70?'Nettoyage urgent recommandé':healthPct>40?'Nettoyage conseillé':'Bon état général';
+    document.getElementById('storage-bar').style.width=healthPct+'%';
+    document.getElementById('storage-bar-label').textContent=data.totalSizeFormatted;
+    document.getElementById('storage-equiv-icon').textContent=equiv.icon;
+    document.getElementById('storage-equiv-text').textContent=equiv.text;
+    document.getElementById('storage-equiv-sub').textContent=equiv.sub;
     document.getElementById('storage-size').textContent=data.totalSizeFormatted;
-    document.getElementById('storage-count').textContent=data.count||data.emails.length;
-    document.getElementById('storage-bar').style.width=Math.min(90,data.emails.length)+'%';
-    document.getElementById('storage-equivalent').textContent=data.equivalent||'';
+    document.getElementById('storage-count').textContent=(data.count||storageEmails.length)+' emails';
+    document.getElementById('storage-gain').textContent=Math.round(healthPct)+'% libérés';
+    document.getElementById('storage-insight-bar').innerHTML='🤖 <strong>Insight IA :</strong> Les pièces jointes lourdes représentent la majorité de ton stockage. En supprimant ces '+(data.count||storageEmails.length)+' emails tu récupères <strong>'+data.totalSizeFormatted+'</strong> — soit '+equiv.text.toLowerCase()+'.';
     var html='<div class="section-title">Top emails par taille</div><div class="email-list">';
-    data.emails.forEach(function(e){
+    storageEmails.forEach(function(e){
+      var catBadge=getStorageCatBadge(e.subject,e.from);
       html+='<div class="email-item" id="storage-'+e.id+'">'+
-        '<div class="email-info"><div class="email-from">'+esc(e.from)+'</div>'+
+        '<div class="email-info">'+
+        '<div class="email-header"><span class="email-from">'+esc(e.from)+'</span>'+catBadge+'</div>'+
         '<div class="email-subject">'+esc(e.subject)+'</div>'+
         '<div class="email-size">📎 '+e.sizeFormatted+'</div></div>'+
         '<button class="btn-action danger" onclick="deleteStorageEmail(\''+e.id+'\')">🗑 Supprimer</button></div>';
@@ -430,81 +602,128 @@ async function loadStorage(){
     html+='</div>';
     result.innerHTML=html;
   }catch(e){result.innerHTML='<div class="empty">❌ Erreur lors du scan</div>';}
+  btn.disabled=false;spinner.style.display='none';btnText.textContent='🗄️ Nettoyer mon stockage Gmail';
 }
 
 async function deleteStorageEmail(id){
   if(!confirm('Supprimer cet email ?'))return;
   await fetch('/api/delete/'+id,{method:'DELETE'});
   var el=document.getElementById('storage-'+id);
-  if(el){
-    el.style.opacity='0';
-    setTimeout(function(){el.remove();},300);
-  }
-  showToast('🗑 Email supprimé — espace libéré !');
+  if(el){el.style.opacity='0';el.style.transform='translateX(20px)';el.style.transition='all 0.3s';setTimeout(function(){el.remove();},300);}
+  showToast('🗑 Email supprimé — espace libéré ! 🎉');
 }
 
+async function deleteAllStorage(){
+  if(!confirm('Supprimer tous les gros emails ? Cette action est irréversible.'))return;
+  var count=0;
+  for(var i=0;i<storageEmails.length;i++){try{await fetch('/api/delete/'+storageEmails[i].id,{method:'DELETE'});count++;}catch(e){}}
+  document.getElementById('storage-result').innerHTML='<div class="empty">🎉 '+count+' emails supprimés — inbox allégée !</div>';
+  document.getElementById('storage-hero-section').style.display='none';
+  showToast('🎉 +'+count+' emails supprimés !');
+}
+
+// ── ARCHIVE ──────────────────────────────────
 async function archiveOld(){
   var btn=document.getElementById('btn-archive');
   var spinner=document.getElementById('spinner-archive');
   var btnText=document.getElementById('btn-archive-text');
-  btn.disabled=true;spinner.style.display='block';btnText.textContent='Inbox Detox en cours...';
+  btn.disabled=true;spinner.style.display='block';btnText.textContent='Reset en cours...';
   try{
     var res=await fetch('/api/archive-old',{method:'POST'});
+    if(res.status===403){document.getElementById('archive-result').innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';return;}
     var data=await res.json();
+    document.getElementById('ba-before-num').textContent=data.archived;
+    document.getElementById('ba-after-num').textContent='✓';
+    document.getElementById('archive-insight').innerHTML='🤖 <strong>Reset effectué !</strong> '+data.archived+' vieux emails archivés. Ta boîte principale ne contient plus que tes emails récents. Tout reste accessible via la recherche Gmail.';
     document.getElementById('archive-result').innerHTML=
       '<div class="archive-result-box">'+
       '<div class="archive-big-num">'+data.archived+'</div>'+
       '<div class="archive-label">emails archivés avec succès ✨</div>'+
-      '<div style="font-size:13px;color:var(--text3);margin-top:8px">Tout est conservé dans Gmail — accessible via la recherche</div>'+
+      '<div class="archive-years">Des années d\'accumulation nettoyées — accessible via la recherche Gmail</div>'+
+      '<div class="inbox-zen-badge">🟢 Inbox Zen débloqué</div>'+
       '</div>';
-    showToast('🎉 Inbox Detox terminé — '+data.archived+' emails archivés !');
-  }catch(e){showToast('❌ Erreur lors de l\'archivage');}
-  btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Lancer l\'Inbox Detox';
+    showToast('🎉 Inbox Reset terminé — '+data.archived+' emails archivés !');
+  }catch(e){showToast('❌ Erreur lors du reset');}
+  btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';
 }
 
+// ── MORNING BRIEF ─────────────────────────────
 async function loadSummary(){
   var result=document.getElementById('summary-result');
-  result.innerHTML='<div class="empty">🤖 Génération du Morning Brief...</div>';
+  result.innerHTML='<div class="empty">🤖 Génération de ton Morning Brief...</div>';
   try{
     var res=await fetch('/api/daily-summary');
+    if(res.status===403){result.innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';return;}
     var data=await res.json();
-    var html='<div class="summary-intro">'+esc(data.intro||'')+'</div>'+
-      '<div class="summary-score">'+esc(data.score||'')+'</div>'+
-      '<div class="summary-cards">';
-    if(data.items&&data.items.length){
-      data.items.forEach(function(item){
-        var actionClass=item.priority==='urgent'?'action-urgent':item.priority==='important'?'action-important':'action-none';
-        html+='<div class="summary-card '+item.priority+'">'+
-          '<div class="summary-card-left">'+
-          '<div class="summary-cat">'+esc(item.category||'')+'</div>'+
-          '<div class="summary-title">'+esc(item.title||'')+'</div>'+
-          '<div class="summary-from">'+esc(item.from||'')+'</div></div>'+
-          '<div class="summary-action '+actionClass+'">'+esc(item.action||'')+'</div>'+
-          '</div>';
-      });
-    }
+    var hero=document.getElementById('brief-hero');
+    hero.style.display='block';
+    var h=new Date().getHours();
+    var greeting=h<12?'Bonjour 👋':h<18?'Bon après-midi 👋':'Bonsoir 👋';
+    document.getElementById('brief-greeting').textContent=greeting;
+    document.getElementById('brief-subtext').textContent=data.intro||'Voici ce qui compte aujourd\'hui.';
+    var badge=document.getElementById('brief-load-badge');
+    var score=data.score||'Journée 🟡';
+    badge.textContent=score;
+    badge.className='brief-load-badge '+(score.includes('🔴')?'load-high':score.includes('🟠')?'load-med':'load-low');
+    var readSecs=Math.max(30,(data.items||[]).length*8);
+    document.getElementById('brief-read-time').textContent='⏱ '+(readSecs<60?readSecs+' sec':Math.round(readSecs/60)+' min')+' de lecture';
+    var urgent=(data.items||[]).filter(function(i){return i.priority==='urgent';}).length;
+    var important=(data.items||[]).filter(function(i){return i.priority==='important';}).length;
+    var info=(data.items||[]).filter(function(i){return i.priority==='info';}).length;
+    document.getElementById('brief-stats-row').innerHTML=
+      '<div class="brief-mini-stat"><div class="brief-mini-num" style="color:var(--red)">'+urgent+'</div><div class="brief-mini-label">Urgents</div></div>'+
+      '<div class="brief-mini-stat"><div class="brief-mini-num" style="color:var(--amber)">'+important+'</div><div class="brief-mini-label">Importants</div></div>'+
+      '<div class="brief-mini-stat"><div class="brief-mini-num" style="color:var(--cyan)">'+info+'</div><div class="brief-mini-label">Infos</div></div>'+
+      '<div class="brief-mini-stat"><div class="brief-mini-num" style="color:var(--green)">'+(data.count||0)+'</div><div class="brief-mini-label">Total du jour</div></div>';
+    if(!data.items||!data.items.length){result.innerHTML='<div class="empty">🎉 Aucun email important aujourd\'hui !</div>';return;}
+    var html='<div class="brief-section-label">Emails du jour — à scanner en 30 sec</div><div class="brief-cards">';
+    data.items.forEach(function(item){
+      var actionClass=item.priority==='urgent'?'action-urgent':item.priority==='important'?'action-important':'action-none';
+      var dotClass=item.priority==='urgent'?'dot-urgent':item.priority==='important'?'dot-important':'dot-info';
+      html+='<div class="brief-card '+item.priority+'">'+
+        '<div class="brief-priority-dot '+dotClass+'"></div>'+
+        '<div>'+
+        '<div class="brief-card-cat">'+esc(item.category||'')+'</div>'+
+        '<div class="brief-card-title">'+esc(item.title||'')+'</div>'+
+        '<div class="brief-card-from">De : '+esc(item.from||'')+'</div>'+
+        '</div>'+
+        '<div class="brief-card-action '+actionClass+'">'+esc(item.action||'Aucune action')+'</div>'+
+        '</div>';
+    });
     html+='</div>';
     result.innerHTML=html;
   }catch(e){result.innerHTML='<div class="empty">❌ Erreur lors de la génération</div>';}
 }
 
+// ── EMPREINTE NUMÉRIQUE ───────────────────────
 async function loadSubscriptions(){
   var result=document.getElementById('subscriptions-result');
-  result.innerHTML='<div class="empty">🔍 Scan de ta vie numérique... (30 sec)</div>';
+  result.innerHTML='<div class="empty">🌐 Scan de ton empreinte numérique...</div>';
   try{
     var res=await fetch('/api/subscriptions');
+    if(res.status===403){result.innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';return;}
     var data=await res.json();
     allSubs=data.subscriptions||[];
     document.getElementById('stat-subs').textContent=data.total||0;
-    document.getElementById('privacy-score-box').style.display='flex';
-    document.getElementById('privacy-num').textContent=data.total||0;
+    var hero=document.getElementById('footprint-hero');
+    hero.style.display='block';
+    document.getElementById('footprint-num').textContent=data.total||0;
     var oldCount=allSubs.filter(function(s){return s.isOld;}).length;
-    document.getElementById('privacy-label').textContent='comptes détectés — '+oldCount+' inactifs';
-    var risk=data.total>100?'🔴 Risque élevé':data.total>50?'🟠 Risque moyen':'🟢 Risque faible';
-    document.getElementById('privacy-risk').textContent=risk+' — '+data.total+' services ont ton email';
-    // Category filters
+    document.getElementById('footprint-sub').textContent='comptes détectés — '+oldCount+' inactifs depuis +3 ans';
+    var expBadge=document.getElementById('exposure-badge');
+    if(data.total>100){expBadge.textContent='🔴 Exposition élevée';expBadge.className='exposure-badge exposure-high';}
+    else if(data.total>50){expBadge.textContent='🟠 Exposition moyenne';expBadge.className='exposure-badge exposure-med';}
+    else{expBadge.textContent='🟢 Exposition faible';expBadge.className='exposure-badge exposure-low';}
     var cats={};
     allSubs.forEach(function(s){cats[s.category]=(cats[s.category]||0)+1;});
+    var topCat=Object.keys(cats).sort(function(a,b){return cats[b]-cats[a];})[0]||'—';
+    document.getElementById('footprint-stats-row').innerHTML=
+      '<div class="fp-stat"><div class="fp-stat-num" style="color:var(--red)">'+oldCount+'</div><div class="fp-stat-label">Inactifs</div></div>'+
+      '<div class="fp-stat"><div class="fp-stat-num" style="color:var(--amber)">'+(data.total-oldCount)+'</div><div class="fp-stat-label">Récents</div></div>'+
+      '<div class="fp-stat"><div class="fp-stat-num" style="color:var(--cyan)">'+Object.keys(cats).length+'</div><div class="fp-stat-label">Catégories</div></div>';
+    var insight=document.getElementById('footprint-insight');
+    insight.style.display='block';
+    insight.innerHTML='🤖 <strong>Analyse IA :</strong> '+data.total+' services possèdent ton email. '+(oldCount>0?'<strong>'+oldCount+' comptes</strong> semblent inactifs depuis +3 ans — risque inutile. ':'')+'Catégorie dominante : <strong>'+topCat+'</strong>.';
     var filterHtml='<button class="cat-btn active" onclick="filterSubs(\'all\')">Tous ('+data.total+')</button>';
     Object.keys(cats).forEach(function(c){filterHtml+='<button class="cat-btn" onclick="filterSubs(\''+c+'\')">'+c+' ('+cats[c]+')</button>';});
     document.getElementById('cat-filter').innerHTML=filterHtml;
@@ -515,25 +734,28 @@ async function loadSubscriptions(){
 function filterSubs(cat){
   document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('active');});
   event.target.classList.add('active');
-  var filtered=cat==='all'?allSubs:allSubs.filter(function(s){return s.category===cat;});
-  renderSubs(filtered);
+  renderSubs(cat==='all'?allSubs:allSubs.filter(function(s){return s.category===cat;}));
 }
 
 function renderSubs(subs){
   var result=document.getElementById('subscriptions-result');
   if(!subs.length){result.innerHTML='<div class="empty">Aucun compte dans cette catégorie</div>';return;}
-  var html='<div class="email-list">';
+  var html='';
   subs.forEach(function(s){
-    var ageBadge=s.isOld?'<span class="badge-old">⚠️ Inactif depuis '+s.year+'</span>':'<span class="badge-recent">✅ Récent</span>';
-    html+='<div class="email-item" id="sub-'+s.id+'">'+
+    var yr=s.year||null;
+    var now=new Date().getFullYear();
+    var ageBadge=s.isOld?'<span class="badge-old">⚠️ Inactif depuis '+(yr||'?')+'</span>':
+      yr&&(now-yr)<2?'<span class="badge-recent">✅ Récent</span>':
+      '<span class="badge-mid">🕐 Depuis '+(yr||'?')+'</span>';
+    html+='<div class="sub-item" id="sub-'+s.id+'">'+
       '<div class="email-info">'+
-      '<div class="email-header"><span class="email-badge b-notif">'+s.category+'</span>'+ageBadge+'</div>'+
+      '<div class="email-header">'+ageBadge+'</div>'+
       '<div class="sub-domain">🌐 '+esc(s.domain)+'</div>'+
+      '<div class="sub-category">'+esc(s.category)+'</div>'+
       '<div class="sub-date">'+esc(s.date)+'</div></div>'+
-      '<button class="btn-action danger" onclick="unsubscribe(\''+s.domain+'\',\''+s.id+'\')">🗑 Supprimer compte</button>'+
+      '<button class="btn-action danger" onclick="unsubscribe(\''+s.domain+'\',\''+s.id+'\')">🗑 Demande RGPD</button>'+
       '</div>';
   });
-  html+='</div>';
   result.innerHTML=html;
 }
 
@@ -553,6 +775,50 @@ function showToast(msg){
   t.textContent=msg;t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},3000);
 }
+
+// ── LIVE AUTO-FILTER (polling 30s, Pro only) ─────────────────────────────────
+var liveFilterInterval = null;
+var liveFilterCount = 0;
+var isProUser = false;
+
+async function startLiveFilter() {
+  // Check if Pro
+  var res = await fetch('/api/me');
+  var data = await res.json();
+  isProUser = data.isPro || false;
+  if (!isProUser) return;
+
+  // Show live badge
+  document.getElementById('live-badge').style.display = 'flex';
+  document.getElementById('live-stat-card').style.display = 'block';
+
+  // Init cursor (first call just sets the historyId)
+  await fetch('/api/auto-filter', { method: 'POST' });
+
+  // Poll every 30s
+  liveFilterInterval = setInterval(async function() {
+    try {
+      var res = await fetch('/api/auto-filter', { method: 'POST' });
+      if (res.status === 403) { clearInterval(liveFilterInterval); return; }
+      var data = await res.json();
+      if (data.filtered > 0) {
+        liveFilterCount += data.filtered;
+        totalCleaned += data.filtered;
+        document.getElementById('stat-live').textContent = liveFilterCount;
+        document.getElementById('stat-cleaned').textContent = totalCleaned;
+        document.getElementById('stat-total').textContent = totalCleaned;
+        document.getElementById('live-badge-text').textContent = '⚡ ' + liveFilterCount + ' filtrés en live';
+        updateStress(totalCleaned);
+        updateInsights();
+        // Toast discret
+        showToast('⚡ ' + data.filtered + ' email(s) filtrés automatiquement !');
+        // Reload email list
+        loadZappieEmails();
+      }
+    } catch(e) {}
+  }, 30000);
+}
+
 function esc(str){return(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 init();
 </script>

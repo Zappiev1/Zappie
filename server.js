@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const session = require('express-session');
 const cors = require('cors');
 const { google } = require('googleapis');
@@ -47,15 +48,30 @@ app.get('/auth/callback', async (req, res) => {
 });
 
 app.get('/auth/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
-app.get('/api/me', (req, res) => {
+app.get('/api/me', async (req, res) => {
   if (!req.session.tokens) return res.json({ connected: false });
-  res.json({ connected: true, email: req.session.email });
+  const isPro = await checkIsPro(req.session.email);
+  res.json({ connected: true, email: req.session.email, isPro });
 });
 
 async function getGmailClient(tokens) {
   const oauth2Client = getOAuthClient();
   oauth2Client.setCredentials(tokens);
   return google.gmail({ version: 'v1', auth: oauth2Client });
+}
+
+// ─── FREE / PRO HELPER ───────────────────────────────────────────────────────
+async function checkIsPro(email) {
+  try {
+    const customers = await stripe.customers.list({ email, limit: 1 });
+    if (!customers.data.length) return false;
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customers.data[0].id,
+      status: 'active',
+      limit: 1
+    });
+    return subscriptions.data.length > 0;
+  } catch { return false; }
 }
 
 async function ensureZappieLabel(gmail) {
@@ -106,23 +122,42 @@ app.post('/api/analyze', async (req, res) => {
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const labelId = await ensureZappieLabel(gmail);
-    const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 500, q: 'is:unread -label:Zappie' });
-    if (!data.messages || data.messages.length === 0) return res.json({ processed: 0, moved: 0, results: [] });
+    const isPro = await checkIsPro(req.session.email);
 
-    // Fetch all message metadata in parallel batches of 10
+    // ── Récupère tous les messages (pagination pour Pro, 35 max pour Free) ──
+    let allMessages = [];
+    if (isPro) {
+      let pageToken = undefined;
+      do {
+        const { data } = await gmail.users.messages.list({
+          userId: 'me', maxResults: 500, q: 'is:unread -label:Zappie',
+          ...(pageToken ? { pageToken } : {})
+        });
+        if (data.messages) allMessages.push(...data.messages);
+        pageToken = data.nextPageToken;
+      } while (pageToken);
+    } else {
+      const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 35, q: 'is:unread -label:Zappie' });
+      if (data.messages) allMessages = data.messages;
+    }
+
+    if (allMessages.length === 0) return res.json({ processed: 0, moved: 0, results: [] });
+
+    // ── Analyse en batches parallèles de 10 (multi-agent IA) ──
     const BATCH = 10;
-    const messages = data.messages;
     let moved = 0;
     const results = [];
 
-    for (let i = 0; i < messages.length; i += BATCH) {
-      const batch = messages.slice(i, i + BATCH);
+    for (let i = 0; i < allMessages.length; i += BATCH) {
+      const batch = allMessages.slice(i, i + BATCH);
+
+      // Fetch metadata en parallèle
       const fetched = await Promise.all(batch.map(msg =>
         gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] })
           .then(r => ({ id: msg.id, data: r.data }))
       ));
 
-      // Analyze in parallel
+      // 10 agents IA en parallèle
       const analyzed = await Promise.all(fetched.map(async ({ id, data: full }) => {
         const headers = full.payload.headers;
         const subject = headers.find(h => h.name === 'Subject')?.value || '(sans sujet)';
@@ -132,7 +167,7 @@ app.post('/api/analyze', async (req, res) => {
         return { id, subject, from, snippet, decision };
       }));
 
-      // Move inutile emails
+      // Move les INUTILE en parallèle
       await Promise.all(analyzed.map(async ({ id, decision }) => {
         if (decision === 'INUTILE') {
           await gmail.users.messages.modify({ userId: 'me', id, requestBody: { addLabelIds: [labelId], removeLabelIds: ['INBOX'] } });
@@ -143,7 +178,7 @@ app.post('/api/analyze', async (req, res) => {
       results.push(...analyzed);
     }
 
-    res.json({ processed: messages.length, moved, results });
+    res.json({ processed: allMessages.length, moved, results, isPro });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
@@ -205,6 +240,8 @@ app.post('/api/unsubscribe-sender/:id', async (req, res) => {
 
 app.get('/api/storage', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  const isPro = await checkIsPro(req.session.email);
+  if (!isPro) return res.status(403).json({ error: 'PRO_REQUIRED', message: 'L\'analyse de stockage est réservée aux membres Pro 🚀' });
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 100, q: 'has:attachment larger:1M' });
@@ -223,6 +260,8 @@ app.get('/api/storage', async (req, res) => {
 
 app.post('/api/archive-old', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  const isPro = await checkIsPro(req.session.email);
+  if (!isPro) return res.status(403).json({ error: 'PRO_REQUIRED', message: 'L\'archivage automatique est réservé aux membres Pro 🚀' });
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const oneYearAgo = new Date();
@@ -244,6 +283,8 @@ app.post('/api/archive-old', async (req, res) => {
 
 app.get('/api/daily-summary', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  const isPro = await checkIsPro(req.session.email);
+  if (!isPro) return res.status(403).json({ error: 'PRO_REQUIRED', message: 'Le résumé journalier est réservé aux membres Pro 🚀' });
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const today = new Date();
@@ -296,6 +337,8 @@ ${emails.map(e => `- De: ${e.from} | Sujet: ${e.subject} | Aperçu: ${e.snippet}
 
 app.get('/api/subscriptions', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  const isPro = await checkIsPro(req.session.email);
+  if (!isPro) return res.status(403).json({ error: 'PRO_REQUIRED', message: 'La gestion des abonnements est réservée aux membres Pro 🚀' });
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const queries = [
@@ -373,11 +416,107 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 
 const PORT = process.env.PORT || 3000;
+// ─── AUTO-FILTER LIVE (polling toutes les 30s) ────────────────────────────────
+// Garde en mémoire le dernier historyId par user pour détecter uniquement les nouveaux emails
+const lastHistoryId = {};
+
+app.post('/api/auto-filter', async (req, res) => {
+  if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  const isPro = await checkIsPro(req.session.email);
+  if (!isPro) return res.status(403).json({ error: 'PRO_REQUIRED' });
+
+  try {
+    const gmail = await getGmailClient(req.session.tokens);
+    const email = req.session.email;
+
+    // Récupère le historyId actuel
+    const profile = await gmail.users.getProfile({ userId: 'me' });
+    const currentHistoryId = profile.data.historyId;
+
+    // Premier appel — on initialise juste le curseur, rien à filtrer
+    if (!lastHistoryId[email]) {
+      lastHistoryId[email] = currentHistoryId;
+      return res.json({ filtered: 0, newMessages: 0, initialized: true });
+    }
+
+    // Pas de changement depuis le dernier check
+    if (currentHistoryId === lastHistoryId[email]) {
+      return res.json({ filtered: 0, newMessages: 0 });
+    }
+
+    // Récupère l'historique depuis le dernier check
+    let newMessages = [];
+    try {
+      const history = await gmail.users.history.list({
+        userId: 'me',
+        startHistoryId: lastHistoryId[email],
+        historyTypes: ['messageAdded'],
+        labelId: 'INBOX'
+      });
+      if (history.data.history) {
+        history.data.history.forEach(h => {
+          if (h.messagesAdded) {
+            h.messagesAdded.forEach(m => {
+              if (!newMessages.find(x => x.id === m.message.id)) {
+                newMessages.push(m.message);
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {
+      // historyId expiré — on remet à jour et on repart
+      lastHistoryId[email] = currentHistoryId;
+      return res.json({ filtered: 0, newMessages: 0, reset: true });
+    }
+
+    lastHistoryId[email] = currentHistoryId;
+
+    if (!newMessages.length) return res.json({ filtered: 0, newMessages: 0 });
+
+    // Récupère le label Zappie
+    const labelId = await ensureZappieLabel(gmail);
+
+    // Analyse les nouveaux emails en parallèle
+    const analyzed = await Promise.all(newMessages.map(async (msg) => {
+      try {
+        const full = await gmail.users.messages.get({
+          userId: 'me', id: msg.id, format: 'metadata',
+          metadataHeaders: ['Subject', 'From']
+        });
+        const headers = full.data.payload.headers;
+        const subject = headers.find(h => h.name === 'Subject')?.value || '';
+        const from = headers.find(h => h.name === 'From')?.value || '';
+        const snippet = full.data.snippet || '';
+        const decision = await analyzeEmailWithAI(subject, from, snippet);
+        return { id: msg.id, subject, from, decision };
+      } catch (e) { return null; }
+    }));
+
+    // Filtre les inutiles
+    let filtered = 0;
+    const filteredEmails = [];
+    await Promise.all(analyzed.filter(Boolean).map(async (email) => {
+      if (email.decision === 'INUTILE') {
+        await gmail.users.messages.modify({
+          userId: 'me', id: email.id,
+          requestBody: { addLabelIds: [labelId], removeLabelIds: ['INBOX'] }
+        });
+        filtered++;
+        filteredEmails.push({ subject: email.subject, from: email.from });
+      }
+    }));
+
+    res.json({ filtered, newMessages: newMessages.length, emails: filteredEmails });
+  } catch (e) {
+    console.error('Auto-filter error:', e);
+    res.status(500).json({ error: 'Erreur auto-filter' });
+  }
+});
+
 app.listen(PORT, () => console.log(`✅ Zappie tourne sur http://localhost:${PORT}`));
 
 // ─── STRIPE PAIEMENT ──────────────────────────────────────────────────────────
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
 const PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_1TVZVV5XAZHLam3soJRrAs8A';
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
