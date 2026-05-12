@@ -177,10 +177,12 @@ app.post('/api/analyze', async (req, res) => {
 
     if (allMessages.length === 0) return res.json({ processed: 0, moved: 0, results: [] });
 
-    // ── Analyse en batches parallèles de 10 (multi-agent IA) ──
-    const BATCH = 10;
+    // ── Analyse en batches séquentiels de 5 (respecte rate limit) ──
+    const BATCH = 5;
     let moved = 0;
     const results = [];
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
 
     for (let i = 0; i < allMessages.length; i += BATCH) {
       const batch = allMessages.slice(i, i + BATCH);
@@ -189,19 +191,35 @@ app.post('/api/analyze', async (req, res) => {
       const fetched = await Promise.all(batch.map(msg =>
         gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] })
           .then(r => ({ id: msg.id, data: r.data }))
+          .catch(() => null)
       ));
 
-      // 10 agents IA en parallèle
-      const analyzed = await Promise.all(fetched.map(async ({ id, data: full }) => {
+      // Analyse séquentielle avec retry sur rate limit
+      const analyzed = [];
+      for (const item of fetched.filter(Boolean)) {
+        const { id, data: full } = item;
         const headers = full.payload.headers;
         const subject = headers.find(h => h.name === 'Subject')?.value || '(sans sujet)';
         const from = headers.find(h => h.name === 'From')?.value || 'Inconnu';
         const snippet = full.snippet || '';
-        const decision = await analyzeEmailWithAI(subject, from, snippet);
-        return { id, subject, from, snippet, decision };
-      }));
+        let decision = 'INUTILE';
+        let attempts = 0;
+        while (attempts < 3) {
+          try {
+            decision = await analyzeEmailWithAI(subject, from, snippet);
+            break;
+          } catch (e) {
+            if (e.status === 429) {
+              await sleep(2000 * (attempts + 1));
+              attempts++;
+            } else break;
+          }
+        }
+        analyzed.push({ id, subject, from, snippet, decision });
+        await sleep(200); // 200ms entre chaque appel IA
+      }
 
-      // Move les INUTILE en parallèle
+      // Move les INUTILE
       await Promise.all(analyzed.map(async ({ id, decision }) => {
         if (decision === 'INUTILE') {
           await gmail.users.messages.modify({ userId: 'me', id, requestBody: { addLabelIds: [labelId], removeLabelIds: ['INBOX'] } });
@@ -210,6 +228,7 @@ app.post('/api/analyze', async (req, res) => {
       }));
 
       results.push(...analyzed);
+      if (i + BATCH < allMessages.length) await sleep(1000); // 1s entre chaque batch
     }
 
     res.json({ processed: allMessages.length, moved, results, isPro });
