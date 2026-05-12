@@ -328,12 +328,29 @@ app.post('/api/archive-old', async (req, res) => {
     const { data: countData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: `in:inbox before:${dateStr}` });
     const total = countData.resultSizeEstimate || 0;
 
-    const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 500, q: `in:inbox before:${dateStr}` });
-    if (!data.messages) return res.json({ archived: 0, total: 0 });
-    await Promise.all(data.messages.map(msg =>
-      gmail.users.messages.modify({ userId: 'me', id: msg.id, requestBody: { removeLabelIds: ['INBOX'] } })
-    ));
-    res.json({ archived: data.messages.length, total });
+    // Paginate through ALL old emails
+    let allMessages = [];
+    let pageToken = undefined;
+    do {
+      const { data: pageData } = await gmail.users.messages.list({
+        userId: 'me', maxResults: 500,
+        q: `in:inbox before:${dateStr}`,
+        ...(pageToken ? { pageToken } : {})
+      });
+      if (pageData.messages) allMessages.push(...pageData.messages);
+      pageToken = pageData.nextPageToken;
+    } while (pageToken);
+
+    if (!allMessages.length) return res.json({ archived: 0, total: 0 });
+
+    // Archive in batches of 50
+    const BATCH = 50;
+    for (let i = 0; i < allMessages.length; i += BATCH) {
+      await Promise.all(allMessages.slice(i, i + BATCH).map(msg =>
+        gmail.users.messages.modify({ userId: 'me', id: msg.id, requestBody: { removeLabelIds: ['INBOX'] } })
+      ));
+    }
+    res.json({ archived: allMessages.length, total: allMessages.length });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

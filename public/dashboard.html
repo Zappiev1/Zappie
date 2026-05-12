@@ -594,7 +594,9 @@ async function analyzeEmails(){
     document.getElementById('stat-total').textContent=totalCleaned;
     updateStress(totalCleaned);
     updateInsights();
-    showToast('✅ '+data.processed+' analysés — '+data.moved+' nettoyés !');
+    var proc=parseInt(data.processed)||0;
+    var mov=parseInt(data.moved)||0;
+    showToast('✅ '+proc+' analysés — '+mov+' nettoyés !');
     loadZappieEmails();
   }catch(e){showToast('❌ Erreur lors de l\'analyse');}
   clearInterval(scanInterval);
@@ -718,17 +720,20 @@ async function archiveOld(){
     if(!res){btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';return;}
     if(res.status===403){document.getElementById('archive-result').innerHTML='<div class="empty">🔒 Fonctionnalité Pro — <a href="/pricing" style="color:var(--purple2)">Passer à Pro</a></div>';btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';return;}
     var data=await res.json();
-    document.getElementById('ba-before-num').textContent=data.archived||0;
-    document.getElementById('ba-after-num').textContent='✓';
-    document.getElementById('archive-insight').innerHTML='🤖 <strong>Reset effectué !</strong> '+data.archived||0+' vieux emails archivés. Ta boîte principale ne contient plus que tes emails récents. Tout reste accessible via la recherche Gmail.';
-    document.getElementById('archive-result').innerHTML=
-      '<div class="archive-result-box">'+
-      '<div class="archive-big-num">'+data.archived||0+'</div>'+
-      '<div class="archive-label">emails archivés avec succès ✨</div>'+
-      '<div class="archive-years">Des années d\'accumulation nettoyées — accessible via la recherche Gmail</div>'+
-      '<div class="inbox-zen-badge">🟢 Inbox Zen débloqué</div>'+
+    var archived = parseInt(data.archived) || 0;
+    var label = selectedPeriod >= 12 ? (selectedPeriod/12)+' an' : selectedPeriod+' mois';
+    document.getElementById('ba-before-num').textContent = archived;
+    document.getElementById('ba-before-sub').textContent = archived + ' emails archivés';
+    document.getElementById('ba-after-num').textContent = '✓';
+    document.getElementById('archive-insight').innerHTML = '🤖 <strong>Reset effectué !</strong> <strong style="color:var(--green)">' + archived + ' emails</strong> de plus de ' + label + ' ont été archivés. Ta boîte principale est maintenant propre. Tout reste accessible via la recherche Gmail.';
+    document.getElementById('archive-result').innerHTML =
+      '<div class="archive-result-box">' +
+      '<div class="archive-big-num">' + archived + '</div>' +
+      '<div class="archive-label">emails archivés avec succès ✨</div>' +
+      '<div class="archive-years">Tout reste accessible via la recherche Gmail</div>' +
+      '<div class="inbox-zen-badge">🟢 Inbox Zen débloqué</div>' +
       '</div>';
-    showToast('🎉 Inbox Reset terminé — '+data.archived||0+' emails archivés !');
+    showToast('🎉 ' + archived + ' emails archivés — Inbox propre !');
   }catch(e){showToast('❌ Erreur lors du reset');}
   btn.disabled=false;spinner.style.display='none';btnText.textContent='🧹 Repartir avec une inbox propre';
 }
