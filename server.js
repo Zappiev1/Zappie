@@ -9,7 +9,10 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: process.env.APP_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'zappie-secret',
@@ -37,14 +40,20 @@ app.get('/auth/google', (req, res) => {
 });
 
 app.get('/auth/callback', async (req, res) => {
-  const oauth2Client = getOAuthClient();
-  const { tokens } = await oauth2Client.getToken(req.query.code);
-  oauth2Client.setCredentials(tokens);
-  const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
-  const { data } = await oauth2.userinfo.get();
-  req.session.tokens = tokens;
-  req.session.email = data.email;
-  res.redirect('/dashboard');
+  if (req.query.error) return res.redirect('/?error=' + req.query.error);
+  try {
+    const oauth2Client = getOAuthClient();
+    const { tokens } = await oauth2Client.getToken(req.query.code);
+    oauth2Client.setCredentials(tokens);
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const { data } = await oauth2.userinfo.get();
+    req.session.tokens = tokens;
+    req.session.email = data.email;
+    res.redirect('/dashboard');
+  } catch (err) {
+    console.error('Auth callback error:', err);
+    res.redirect('/?error=auth_failed');
+  }
 });
 
 app.get('/auth/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
@@ -81,9 +90,10 @@ const weeklyUsage = {}; // { 'email:feature': { count, weekStart } }
 function getWeekStart() {
   const now = new Date();
   const day = now.getDay(); // 0=Sun
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
-  const monday = new Date(now.setDate(diff));
-  monday.setHours(0,0,0,0);
+  const diff = (day === 0 ? -6 : 1 - day); // offset to Monday
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
   return monday.getTime();
 }
 
@@ -614,8 +624,6 @@ app.post('/api/auto-filter', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`✅ Zappie tourne sur http://localhost:${PORT}`));
-
 // ─── STRIPE PAIEMENT ──────────────────────────────────────────────────────────
 const PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_1TVchf8UsIPkunXGdzoJWrOo';
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
@@ -658,5 +666,11 @@ app.get('/api/subscription-status', async (req, res) => {
 });
 
 // Page pricing
-app.get('/pricing', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pricing.html')));
- 
+app.get('/pricing', (req, res) => {
+  const pricingPath = path.join(__dirname, 'public', 'pricing.html');
+  res.sendFile(pricingPath, (err) => {
+    if (err) res.redirect('/dashboard');
+  });
+});
+
+app.listen(PORT, () => console.log(`✅ Zappie tourne sur http://localhost:${PORT}`));

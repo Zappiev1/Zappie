@@ -42,7 +42,19 @@ h1 span{background:linear-gradient(135deg,var(--purple),var(--purple2));-webkit-
 <body>
 <nav>
   <a href="/" class="logo"><div class="logo-icon">⚡</div>Zappie</a>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <a href="/dashboard" style="font-size:13px;color:var(--text2);text-decoration:none;font-weight:600;" id="nav-dashboard" style="display:none">Mon dashboard</a>
+    <a href="/auth/google" style="background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;border:none;border-radius:10px;padding:9px 20px;font-family:'Cabinet Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;">Commencer gratuitement</a>
+  </div>
 </nav>
+<script>
+// Check if user is already connected and show dashboard link
+fetch('/api/me').then(r => r.json()).then(d => {
+  if (d.connected) {
+    document.getElementById('nav-dashboard').style.display = 'inline';
+  }
+}).catch(() => {});
+</script>
 <main>
   <h1>Simple et <span>transparent</span></h1>
   <p class="subtitle">Commence gratuitement. Passe à Pro quand tu es prêt.</p>
@@ -81,10 +93,25 @@ h1 span{background:linear-gradient(135deg,var(--purple),var(--purple2));-webkit-
 </main>
 <script>
 async function startCheckout() {
-  const res = await fetch('/api/create-checkout', { method: 'POST' });
-  const data = await res.json();
-  if (data.url) { window.location.href = data.url; }
-  else { alert('Connecte-toi d\'abord avec Google !'); location.href = '/auth/google'; }
+  const btn = document.querySelector('.btn-pro');
+  const originalText = btn.textContent;
+  btn.textContent = 'Chargement...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/create-checkout', { method: 'POST' });
+    if (!res.ok) throw new Error('server_error');
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert('Connecte-toi d\'abord avec Google !');
+      location.href = '/auth/google';
+    }
+  } catch (e) {
+    alert('Erreur de connexion. Vérifie ta connexion internet et réessaie.');
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 }
 </script>
 </body>

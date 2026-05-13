@@ -6,7 +6,7 @@
 <title>Zappie — AI Digital Cleanup Assistant</title>
 <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
-:root{--bg:#080810;--bg2:#0d0d1a;--purple:#7c5cfc;--purple2:#a78bfa;--glow:rgba(124,92,252,0.35);--text:#f0eeff;--text2:#9490b8;--text3:#4a4870;--border:rgba(124,92,252,0.2);--border2:rgba(255,255,255,0.06);--green:#22c55e;--red:#ef4444;--cyan:#06b6d4;}
+:root{--bg:#080810;--bg2:#0d0d1a;--purple:#7c5cfc;--purple2:#a78bfa;--glow:rgba(124,92,252,0.35);--text:#f0eeff;--text2:#9490b8;--text3:#4a4870;--border:rgba(124,92,252,0.2);--border2:rgba(255,255,255,0.06);--green:#22c55e;--red:#ef4444;--cyan:#06b6d4;--amber:#f59e0b;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Cabinet Grotesk',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;}
 body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(124,92,252,0.18),transparent),radial-gradient(ellipse 50% 40% at 80% 80%,rgba(6,182,212,0.06),transparent);pointer-events:none;z-index:0;}
@@ -82,8 +82,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 </head>
 <body>
 <nav>
-  <div class="logo"><div class="logo-icon">⚡</div>Zappie</div>
-  <a href="/auth/google" class="btn-nav">Commencer gratuitement</a>
+  <a href="/" class="logo" style="text-decoration:none;color:var(--text)"><div class="logo-icon">⚡</div>Zappie</a>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="/pricing" style="font-size:14px;color:var(--text2);text-decoration:none;font-weight:600;">Tarifs</a>
+    <a href="/auth/google" class="btn-nav">Commencer gratuitement</a>
+  </div>
 </nav>
 
 <section class="hero">

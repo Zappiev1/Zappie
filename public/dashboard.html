@@ -379,12 +379,12 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
         <button class="period-btn" onclick="selectPeriod(this,12)">1 an</button>
         <button class="period-btn" onclick="selectPeriod(this,24)">2 ans</button>
       </div>
-      <div class="archive-subtitle" style="display:none à zéro. Zappie archive tous tes vieux emails et ne garde que ce qui est récent dans ta boîte principale. Ta vie numérique, remise à neuf.</div>
+      <div class="archive-subtitle" style="display:none;">Zappie archive tous tes vieux emails et ne garde que ce qui est récent dans ta boîte principale. Ta vie numérique, remise à neuf.</div>
       <div class="before-after">
         <div class="ba-box ba-before">
           <div class="ba-label">📬 Avant</div>
           <div class="ba-num" id="ba-before-num">?</div>
-          <div class="ba-sub">emails vieux d'1 an+</div>
+          <div class="ba-sub" id="ba-before-sub">emails dans ton inbox</div>
         </div>
         <div class="ba-arrow">→</div>
         <div class="ba-box ba-after">
@@ -819,16 +819,16 @@ async function loadSubscriptions(){
     var insight=document.getElementById('footprint-insight');
     insight.style.display='block';
     insight.innerHTML='🤖 <strong>Analyse IA :</strong> '+data.total+' services possèdent ton email. '+(oldCount>0?'<strong>'+oldCount+' comptes</strong> semblent inactifs depuis +3 ans — risque inutile. ':'')+'Catégorie dominante : <strong>'+topCat+'</strong>.';
-    var filterHtml='<button class="cat-btn active" onclick="filterSubs(\'all\')">Tous ('+data.total+')</button>';
-    Object.keys(cats).forEach(function(c){filterHtml+='<button class="cat-btn" onclick="filterSubs(\''+c+'\')">'+c+' ('+cats[c]+')</button>';});
+    var filterHtml='<button class="cat-btn active" onclick="filterSubs(\'all\',this)">Tous ('+data.total+')</button>';
+    Object.keys(cats).forEach(function(c){filterHtml+='<button class="cat-btn" onclick="filterSubs(\''+c+'\',this)">'+c+' ('+cats[c]+')</button>';});
     document.getElementById('cat-filter').innerHTML=filterHtml;
     renderSubs(allSubs);
   }catch(e){result.innerHTML='<div class="empty">❌ Erreur lors du scan</div>';}
 }
 
-function filterSubs(cat){
+function filterSubs(cat, btn){
   document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('active');});
-  event.target.classList.add('active');
+  if(btn) btn.classList.add('active');
   renderSubs(cat==='all'?allSubs:allSubs.filter(function(s){return s.category===cat;}));
 }
 
@@ -895,7 +895,6 @@ function closeProModal() {
 // Handle 429 FREE_LIMIT response
 async function handleResponse(res, feature) {
   if (res.status === 429 || res.status === 403) {
-    try { var d = await res.json(); } catch(e) { var d = {}; }
     if (res.status === 429) {
       showProModal('Limite hebdomadaire atteinte 🔒', 'Tu as utilisé tes 3 actions gratuites cette semaine. Reviens lundi ou passe à Pro pour un accès illimité !');
     } else {
