@@ -17,11 +17,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'zappie-secret',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 }
 }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// ─── OAUTH ───────────────────────────────────────────────────────────────────
 function getOAuthClient() {
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -30,11 +32,21 @@ function getOAuthClient() {
   );
 }
 
+async function getGmailClient(tokens) {
+  const oauth2Client = getOAuthClient();
+  oauth2Client.setCredentials(tokens);
+  return google.gmail({ version: 'v1', auth: oauth2Client });
+}
+
 app.get('/auth/google', (req, res) => {
   const oauth2Client = getOAuthClient();
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/userinfo.email']
+    prompt: 'consent',
+    scope: [
+      'https://www.googleapis.com/auth/gmail.modify',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ]
   });
   res.redirect(url);
 });
@@ -57,19 +69,11 @@ app.get('/auth/callback', async (req, res) => {
 });
 
 app.get('/auth/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
-app.get('/api/me', async (req, res) => {
-  if (!req.session.tokens) return res.json({ connected: false });
-  const isPro = await checkIsPro(req.session.email);
-  res.json({ connected: true, email: req.session.email, isPro });
-});
 
-async function getGmailClient(tokens) {
-  const oauth2Client = getOAuthClient();
-  oauth2Client.setCredentials(tokens);
-  return google.gmail({ version: 'v1', auth: oauth2Client });
-}
+// ─── STRIPE HELPERS ──────────────────────────────────────────────────────────
+const PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_1TVchf8UsIPkunXGdzoJWrOo';
+const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
-// ─── FREE / PRO HELPER ───────────────────────────────────────────────────────
 async function checkIsPro(email) {
   try {
     const customers = await stripe.customers.list({ email, limit: 1 });
@@ -83,14 +87,13 @@ async function checkIsPro(email) {
   } catch { return false; }
 }
 
-
-// ─── FREE PLAN: USAGE TRACKER (3x/semaine par feature) ───────────────────────
-const weeklyUsage = {}; // { 'email:feature': { count, weekStart } }
+// ─── FREE PLAN USAGE ─────────────────────────────────────────────────────────
+const weeklyUsage = {};
 
 function getWeekStart() {
   const now = new Date();
-  const day = now.getDay(); // 0=Sun
-  const diff = (day === 0 ? -6 : 1 - day); // offset to Monday
+  const day = now.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
   const monday = new Date(now);
   monday.setDate(now.getDate() + diff);
   monday.setHours(0, 0, 0, 0);
@@ -118,33 +121,23 @@ function incrementWeeklyUsage(email, feature) {
 
 const FREE_LIMIT = 3;
 
+// ─── GMAIL HELPERS ────────────────────────────────────────────────────────────
 async function ensureZappieLabel(gmail) {
   const { data } = await gmail.users.labels.list({ userId: 'me' });
   let label = data.labels.find(l => l.name === 'Zappie');
   if (!label) {
     const res = await gmail.users.labels.create({
       userId: 'me',
-      requestBody: { name: 'Zappie', labelListVisibility: 'labelShow', messageListVisibility: 'show', color: { backgroundColor: '#b694e8', textColor: '#000000' } }
+      requestBody: {
+        name: 'Zappie',
+        labelListVisibility: 'labelShow',
+        messageListVisibility: 'show',
+        color: { backgroundColor: '#b694e8', textColor: '#000000' }
+      }
     });
     label = res.data;
   }
   return label.id;
-}
-
-async function analyzeEmailWithAI(subject, from, snippet) {
-  const message = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 10,
-    messages: [{
-      role: 'user',
-      content: `Email: De: ${from} | Sujet: ${subject} | Aperçu: ${snippet}
-Réponds UNIQUEMENT "IMPORTANT" ou "INUTILE".
-INUTILE = promotions, newsletters, notifications apps, réseaux sociaux, marketing, spam.
-IMPORTANT = emails perso, pro urgents, factures, rendez-vous, banque.
-En cas de doute: INUTILE.`
-    }]
-  });
-  return message.content[0].text.trim().includes('IMPORTANT') ? 'IMPORTANT' : 'INUTILE';
 }
 
 function formatSize(bytes) {
@@ -153,14 +146,105 @@ function formatSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-function bytesToEquivalent(bytes) {
-  const mb = bytes / (1024 * 1024);
-  if (mb > 1000) return `~${(mb/1024).toFixed(1)} GB — comme ${Math.round(mb/4)} photos 📸`;
-  if (mb > 100) return `~${Math.round(mb/4)} photos 📸`;
-  return `~${Math.round(mb/0.5)} emails standards`;
+// ─── AI EMAIL CLASSIFIER ─────────────────────────────────────────────────────
+async function analyzeEmailWithAI(subject, from, snippet) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let attempts = 0;
+  while (attempts < 3) {
+    try {
+      const message = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 30,
+        messages: [{
+          role: 'user',
+          content: `Classify this email. Reply with ONLY one word: IMPORTANT, PROMOTION, NEWSLETTER, NOTIFICATION, or SPAM.
+
+From: ${from}
+Subject: ${subject}
+Preview: ${snippet}
+
+Rules:
+- IMPORTANT: personal emails, work, invoices, appointments, bank, delivery
+- PROMOTION: sales, discounts, offers, marketing
+- NEWSLETTER: digests, blog updates, weekly/monthly content
+- NOTIFICATION: app alerts, social media, automated system messages
+- SPAM: unsolicited, suspicious, irrelevant
+
+Reply with ONE WORD only.`
+        }]
+      });
+      const result = message.content[0].text.trim().toUpperCase();
+      const validCategories = ['IMPORTANT', 'PROMOTION', 'NEWSLETTER', 'NOTIFICATION', 'SPAM'];
+      const category = validCategories.find(c => result.includes(c)) || 'NOTIFICATION';
+      const isUseless = category !== 'IMPORTANT';
+      return { category, isUseless };
+    } catch (e) {
+      if (e.status === 429) {
+        await sleep(2000 * (attempts + 1));
+        attempts++;
+      } else {
+        return { category: 'NOTIFICATION', isUseless: true };
+      }
+    }
+  }
+  return { category: 'NOTIFICATION', isUseless: true };
 }
 
-// ─── ANALYSE PARALLELE x10 ───────────────────────────────────────────────────
+// ─── /api/me ─────────────────────────────────────────────────────────────────
+app.get('/api/me', async (req, res) => {
+  if (!req.session.tokens) return res.json({ connected: false });
+  try {
+    const isPro = await checkIsPro(req.session.email);
+    // Get real inbox count from Gmail
+    const gmail = await getGmailClient(req.session.tokens);
+    const profile = await gmail.users.getProfile({ userId: 'me' });
+    res.json({
+      connected: true,
+      email: req.session.email,
+      isPro,
+      messagesTotal: profile.data.messagesTotal || 0,
+      threadsTotal: profile.data.threadsTotal || 0
+    });
+  } catch (err) {
+    res.json({ connected: true, email: req.session.email, isPro: false });
+  }
+});
+
+// ─── /api/stats — REAL Gmail stats ───────────────────────────────────────────
+app.get('/api/stats', async (req, res) => {
+  if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const gmail = await getGmailClient(req.session.tokens);
+
+    // Real inbox count
+    const { data: inboxData } = await gmail.users.messages.list({
+      userId: 'me', maxResults: 1, labelIds: ['INBOX']
+    });
+    const inboxCount = inboxData.resultSizeEstimate || 0;
+
+    // Real Zappie label count
+    const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
+    const zappieLabel = labelsData.labels.find(l => l.name === 'Zappie');
+    let zappieCount = 0;
+    if (zappieLabel) {
+      const { data: zappieData } = await gmail.users.labels.get({
+        userId: 'me', id: zappieLabel.id
+      });
+      zappieCount = zappieData.messagesTotal || 0;
+    }
+
+    res.json({
+      inboxCount,
+      zappieCount,
+      timeSaved: Math.round(zappieCount * 0.5)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── /api/analyze — REAL AI classification ───────────────────────────────────
 app.post('/api/analyze', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
@@ -168,83 +252,90 @@ app.post('/api/analyze', async (req, res) => {
     const labelId = await ensureZappieLabel(gmail);
     const isPro = await checkIsPro(req.session.email);
 
-    // ── Récupère tous les messages (pagination pour Pro, 35 max pour Free) ──
+    // Fetch real inbox emails (unread, not already in Zappie)
     let allMessages = [];
     if (isPro) {
-      let pageToken = undefined;
+      let pageToken;
       do {
         const { data } = await gmail.users.messages.list({
-          userId: 'me', maxResults: 500, q: 'is:unread -label:Zappie',
+          userId: 'me', maxResults: 500,
+          q: 'is:unread -label:Zappie',
           ...(pageToken ? { pageToken } : {})
         });
         if (data.messages) allMessages.push(...data.messages);
         pageToken = data.nextPageToken;
-      } while (pageToken);
+      } while (pageToken && allMessages.length < 2000);
     } else {
-      const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 35, q: 'is:unread -label:Zappie' });
+      const { data } = await gmail.users.messages.list({
+        userId: 'me', maxResults: 35, q: 'is:unread -label:Zappie'
+      });
       if (data.messages) allMessages = data.messages;
     }
 
-    if (allMessages.length === 0) return res.json({ processed: 0, moved: 0, results: [] });
+    if (!allMessages.length) return res.json({ processed: 0, moved: 0, results: [], inboxCount: 0 });
 
-    // ── Analyse en batches séquentiels de 5 (respecte rate limit) ──
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
     const BATCH = 5;
     let moved = 0;
     const results = [];
 
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
-
     for (let i = 0; i < allMessages.length; i += BATCH) {
       const batch = allMessages.slice(i, i + BATCH);
 
-      // Fetch metadata en parallèle
+      // Fetch real metadata in parallel
       const fetched = await Promise.all(batch.map(msg =>
-        gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] })
-          .then(r => ({ id: msg.id, data: r.data }))
-          .catch(() => null)
+        gmail.users.messages.get({
+          userId: 'me', id: msg.id, format: 'metadata',
+          metadataHeaders: ['Subject', 'From']
+        }).then(r => ({ id: msg.id, data: r.data })).catch(() => null)
       ));
 
-      // Analyse séquentielle avec retry sur rate limit
-      const analyzed = [];
+      // Analyze each email with real AI
       for (const item of fetched.filter(Boolean)) {
         const { id, data: full } = item;
         const headers = full.payload.headers;
         const subject = headers.find(h => h.name === 'Subject')?.value || '(sans sujet)';
         const from = headers.find(h => h.name === 'From')?.value || 'Inconnu';
         const snippet = full.snippet || '';
-        let decision = 'INUTILE';
-        let attempts = 0;
-        while (attempts < 3) {
+
+        const { category, isUseless } = await analyzeEmailWithAI(subject, from, snippet);
+
+        if (isUseless) {
           try {
-            decision = await analyzeEmailWithAI(subject, from, snippet);
-            break;
-          } catch (e) {
-            if (e.status === 429) {
-              await sleep(2000 * (attempts + 1));
-              attempts++;
-            } else break;
-          }
+            await gmail.users.messages.modify({
+              userId: 'me', id,
+              requestBody: { addLabelIds: [labelId], removeLabelIds: ['INBOX'] }
+            });
+            moved++;
+          } catch (e) { console.error('Move error:', e.message); }
         }
-        analyzed.push({ id, subject, from, snippet, decision });
-        await sleep(200); // 200ms entre chaque appel IA
+
+        results.push({ id, subject, from, snippet, category, isUseless });
+        await sleep(150);
       }
 
-      // Move les INUTILE
-      await Promise.all(analyzed.map(async ({ id, decision }) => {
-        if (decision === 'INUTILE') {
-          await gmail.users.messages.modify({ userId: 'me', id, requestBody: { addLabelIds: [labelId], removeLabelIds: ['INBOX'] } });
-          moved++;
-        }
-      }));
-
-      results.push(...analyzed);
-      if (i + BATCH < allMessages.length) await sleep(1000); // 1s entre chaque batch
+      if (i + BATCH < allMessages.length) await sleep(800);
     }
 
-    res.json({ processed: allMessages.length, moved, results, isPro });
-  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
+    // Get real updated inbox count
+    const { data: inboxData } = await gmail.users.messages.list({
+      userId: 'me', maxResults: 1, labelIds: ['INBOX']
+    });
+
+    res.json({
+      processed: allMessages.length,
+      moved,
+      results,
+      isPro,
+      inboxCount: inboxData.resultSizeEstimate || 0
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ─── /api/zappie-emails — REAL emails from Zappie label ──────────────────────
 app.get('/api/zappie-emails', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
@@ -252,79 +343,136 @@ app.get('/api/zappie-emails', async (req, res) => {
     const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
     const label = labelsData.labels.find(l => l.name === 'Zappie');
     if (!label) return res.json({ emails: [], total: 0 });
-    const { data } = await gmail.users.messages.list({ userId: 'me', labelIds: [label.id], maxResults: 50 });
-    if (!data.messages) return res.json({ emails: [], total: 0 });
-    const emails = await Promise.all(data.messages.slice(0, 20).map(async msg => {
-      const { data: full } = await gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From', 'Date'] });
-      const headers = full.payload.headers;
-      return {
-        id: msg.id,
-        subject: headers.find(h => h.name === 'Subject')?.value || '(sans sujet)',
-        from: headers.find(h => h.name === 'From')?.value || 'Inconnu',
-        date: headers.find(h => h.name === 'Date')?.value || '',
-        snippet: full.snippet
-      };
+
+    const { data: labelInfo } = await gmail.users.labels.get({ userId: 'me', id: label.id });
+    const total = labelInfo.messagesTotal || 0;
+
+    const { data } = await gmail.users.messages.list({
+      userId: 'me', labelIds: [label.id], maxResults: 50
+    });
+    if (!data.messages) return res.json({ emails: [], total });
+
+    const emails = await Promise.all(data.messages.slice(0, 30).map(async msg => {
+      try {
+        const { data: full } = await gmail.users.messages.get({
+          userId: 'me', id: msg.id, format: 'metadata',
+          metadataHeaders: ['Subject', 'From', 'Date']
+        });
+        const headers = full.payload.headers;
+        return {
+          id: msg.id,
+          subject: headers.find(h => h.name === 'Subject')?.value || '(sans sujet)',
+          from: headers.find(h => h.name === 'From')?.value || 'Inconnu',
+          date: headers.find(h => h.name === 'Date')?.value || '',
+          snippet: full.snippet || ''
+        };
+      } catch { return null; }
     }));
-    res.json({ emails, total: data.messages.length });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+
+    res.json({ emails: emails.filter(Boolean), total });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ─── /api/restore/:id ────────────────────────────────────────────────────────
 app.post('/api/restore/:id', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
     const label = labelsData.labels.find(l => l.name === 'Zappie');
-    await gmail.users.messages.modify({ userId: 'me', id: req.params.id, requestBody: { addLabelIds: ['INBOX'], removeLabelIds: label ? [label.id] : [] } });
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    await gmail.users.messages.modify({
+      userId: 'me', id: req.params.id,
+      requestBody: { addLabelIds: ['INBOX'], removeLabelIds: label ? [label.id] : [] }
+    });
+    // Return updated counts
+    const { data: inboxData } = await gmail.users.messages.list({
+      userId: 'me', maxResults: 1, labelIds: ['INBOX']
+    });
+    res.json({ success: true, inboxCount: inboxData.resultSizeEstimate || 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ─── /api/delete/:id ─────────────────────────────────────────────────────────
 app.delete('/api/delete/:id', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
     const gmail = await getGmailClient(req.session.tokens);
     await gmail.users.messages.trash({ userId: 'me', id: req.params.id });
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/api/unsubscribe-sender/:id', async (req, res) => {
-  if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
-  try {
-    const gmail = await getGmailClient(req.session.tokens);
-    const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
-    const label = labelsData.labels.find(l => l.name === 'Zappie');
-    // Move to trash and keep in Zappie
-    await gmail.users.messages.modify({ userId: 'me', id: req.params.id, requestBody: { addLabelIds: label ? [label.id] : [], removeLabelIds: ['INBOX'] } });
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
+// ─── /api/storage — REAL attachment sizes ────────────────────────────────────
 app.get('/api/storage', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
   if (!isPro) {
-    const usedStorage = checkWeeklyLimit(req.session.email, 'storage');
-    if (usedStorage >= FREE_LIMIT) return res.status(429).json({ error: 'FREE_LIMIT', message: 'Limite hebdomadaire atteinte (3/semaine). Passe à Pro pour un accès illimité 🚀', used: usedStorage, limit: FREE_LIMIT });
+    const used = checkWeeklyLimit(req.session.email, 'storage');
+    if (used >= FREE_LIMIT) return res.status(429).json({
+      error: 'FREE_LIMIT',
+      message: 'Limite hebdomadaire atteinte. Passe à Pro pour un accès illimité.',
+      used, limit: FREE_LIMIT
+    });
     incrementWeeklyUsage(req.session.email, 'storage');
   }
   try {
     const gmail = await getGmailClient(req.session.tokens);
-    const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 100, q: 'has:attachment larger:1M' });
-    if (!data.messages) return res.json({ emails: [], totalSize: 0, totalSizeFormatted: '0 B', equivalent: '' });
-    const emails = await Promise.all(data.messages.slice(0, 20).map(async msg => {
-      const { data: full } = await gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From', 'Date'] });
-      const headers = full.payload.headers;
-      const size = full.sizeEstimate || 0;
-      return { id: msg.id, subject: headers.find(h => h.name === 'Subject')?.value || '(sans sujet)', from: headers.find(h => h.name === 'From')?.value || 'Inconnu', date: headers.find(h => h.name === 'Date')?.value || '', size, sizeFormatted: formatSize(size) };
+
+    // Fetch real large emails with attachments
+    const { data } = await gmail.users.messages.list({
+      userId: 'me', maxResults: 100, q: 'has:attachment larger:500K'
+    });
+    if (!data.messages) return res.json({ emails: [], totalSize: 0, totalSizeFormatted: '0 B', count: 0 });
+
+    const emails = await Promise.all(data.messages.slice(0, 25).map(async msg => {
+      try {
+        const { data: full } = await gmail.users.messages.get({
+          userId: 'me', id: msg.id, format: 'metadata',
+          metadataHeaders: ['Subject', 'From', 'Date']
+        });
+        const headers = full.payload.headers;
+        const size = full.sizeEstimate || 0;
+        // Detect attachment type from subject/snippet
+        const subject = headers.find(h => h.name === 'Subject')?.value || '';
+        const s = subject.toLowerCase();
+        let attachType = '📦 Pièce jointe';
+        if (s.includes('pdf') || s.includes('facture') || s.includes('invoice')) attachType = '📄 PDF';
+        else if (s.includes('photo') || s.includes('image') || s.includes('jpg') || s.includes('png')) attachType = '🖼️ Photo';
+        else if (s.includes('video') || s.includes('mp4') || s.includes('mov')) attachType = '🎥 Vidéo';
+
+        return {
+          id: msg.id,
+          subject,
+          from: headers.find(h => h.name === 'From')?.value || 'Inconnu',
+          date: headers.find(h => h.name === 'Date')?.value || '',
+          size,
+          sizeFormatted: formatSize(size),
+          attachType
+        };
+      } catch { return null; }
     }));
-    emails.sort((a, b) => b.size - a.size);
-    const totalSize = emails.reduce((s, e) => s + e.size, 0);
-    res.json({ emails, totalSize, totalSizeFormatted: formatSize(totalSize), equivalent: bytesToEquivalent(totalSize), count: data.messages.length });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+
+    const valid = emails.filter(Boolean).sort((a, b) => b.size - a.size);
+    const totalSize = valid.reduce((s, e) => s + e.size, 0);
+
+    res.json({
+      emails: valid,
+      totalSize,
+      totalSizeFormatted: formatSize(totalSize),
+      count: data.messages.length
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ─── /api/archive-count — REAL count ─────────────────────────────────────────
 app.get('/api/archive-count', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
@@ -332,34 +480,45 @@ app.get('/api/archive-count', async (req, res) => {
     const months = parseInt(req.query.months) || 6;
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - months);
-    const dateStr = `${cutoff.getFullYear()}/${String(cutoff.getMonth()+1).padStart(2,'0')}/${String(cutoff.getDate()).padStart(2,'0')}`;
-    const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: `in:inbox before:${dateStr}` });
+    const dateStr = `${cutoff.getFullYear()}/${String(cutoff.getMonth() + 1).padStart(2, '0')}/${String(cutoff.getDate()).padStart(2, '0')}`;
+    const { data } = await gmail.users.messages.list({
+      userId: 'me', maxResults: 1, q: `in:inbox before:${dateStr}`
+    });
     res.json({ count: data.resultSizeEstimate || 0, months });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ─── /api/archive-old — REAL archive action ──────────────────────────────────
 app.post('/api/archive-old', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
   if (!isPro) {
-    const usedArchive = checkWeeklyLimit(req.session.email, 'archive');
-    if (usedArchive >= FREE_LIMIT) return res.status(429).json({ error: 'FREE_LIMIT', message: 'Limite hebdomadaire atteinte (3/semaine). Passe à Pro pour un accès illimité 🚀', used: usedArchive, limit: FREE_LIMIT });
+    const used = checkWeeklyLimit(req.session.email, 'archive');
+    if (used >= FREE_LIMIT) return res.status(429).json({
+      error: 'FREE_LIMIT',
+      message: 'Limite hebdomadaire atteinte. Passe à Pro pour un accès illimité.',
+      used, limit: FREE_LIMIT
+    });
     incrementWeeklyUsage(req.session.email, 'archive');
   }
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const months = parseInt(req.query.months) || 6;
-    const oneYearAgo = new Date();
-    oneYearAgo.setMonth(oneYearAgo.getMonth() - months);
-    const dateStr = `${oneYearAgo.getFullYear()}/${String(oneYearAgo.getMonth()+1).padStart(2,'0')}/${String(oneYearAgo.getDate()).padStart(2,'0')}`;
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - months);
+    const dateStr = `${cutoff.getFullYear()}/${String(cutoff.getMonth() + 1).padStart(2, '0')}/${String(cutoff.getDate()).padStart(2, '0')}`;
 
-    // Count first
-    const { data: countData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: `in:inbox before:${dateStr}` });
-    const total = countData.resultSizeEstimate || 0;
+    // Get real inbox count BEFORE
+    const { data: beforeData } = await gmail.users.messages.list({
+      userId: 'me', maxResults: 1, labelIds: ['INBOX']
+    });
+    const inboxBefore = beforeData.resultSizeEstimate || 0;
 
-    // Paginate through ALL old emails
+    // Fetch all old emails
     let allMessages = [];
-    let pageToken = undefined;
+    let pageToken;
     do {
       const { data: pageData } = await gmail.users.messages.list({
         userId: 'me', maxResults: 500,
@@ -370,62 +529,104 @@ app.post('/api/archive-old', async (req, res) => {
       pageToken = pageData.nextPageToken;
     } while (pageToken);
 
-    if (!allMessages.length) return res.json({ archived: 0, total: 0 });
+    if (!allMessages.length) return res.json({ archived: 0, inboxBefore, inboxAfter: inboxBefore });
 
-    // Archive in batches of 50
+    // Archive in batches of 50 — real Gmail archive = remove INBOX label
     const BATCH = 50;
     for (let i = 0; i < allMessages.length; i += BATCH) {
       await Promise.all(allMessages.slice(i, i + BATCH).map(msg =>
-        gmail.users.messages.modify({ userId: 'me', id: msg.id, requestBody: { removeLabelIds: ['INBOX'] } })
+        gmail.users.messages.modify({
+          userId: 'me', id: msg.id,
+          requestBody: { removeLabelIds: ['INBOX'] }
+        }).catch(() => null)
       ));
     }
-    res.json({ archived: allMessages.length, total: allMessages.length });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+
+    // Get real inbox count AFTER
+    const { data: afterData } = await gmail.users.messages.list({
+      userId: 'me', maxResults: 1, labelIds: ['INBOX']
+    });
+    const inboxAfter = afterData.resultSizeEstimate || 0;
+
+    res.json({
+      archived: allMessages.length,
+      inboxBefore,
+      inboxAfter,
+      reduction: inboxBefore > 0 ? Math.round((allMessages.length / inboxBefore) * 100) : 0
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ─── /api/daily-summary — REAL emails summarized by AI ───────────────────────
 app.get('/api/daily-summary', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
   if (!isPro) {
-    const usedSummary = checkWeeklyLimit(req.session.email, 'summary');
-    if (usedSummary >= FREE_LIMIT) return res.status(429).json({ error: 'FREE_LIMIT', message: 'Limite hebdomadaire atteinte (3/semaine). Passe à Pro pour un accès illimité 🚀', used: usedSummary, limit: FREE_LIMIT });
+    const used = checkWeeklyLimit(req.session.email, 'summary');
+    if (used >= FREE_LIMIT) return res.status(429).json({
+      error: 'FREE_LIMIT',
+      message: 'Limite hebdomadaire atteinte. Passe à Pro pour un accès illimité.',
+      used, limit: FREE_LIMIT
+    });
     incrementWeeklyUsage(req.session.email, 'summary');
   }
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const today = new Date();
-    const dateStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
-    const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 20, q: `in:inbox after:${dateStr} -label:Zappie` });
-    if (!data.messages) return res.json({ items: [], intro: 'Aucun email important aujourd\'hui ! 🎉 Profite de ta journée.', count: 0, score: 'Journée légère 🟢' });
-    
+    const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+
+    // Fetch today's real inbox emails
+    const { data } = await gmail.users.messages.list({
+      userId: 'me', maxResults: 20, q: `in:inbox after:${dateStr} -label:Zappie`
+    });
+
+    if (!data.messages) return res.json({
+      items: [], intro: 'Aucun email important aujourd\'hui ! 🎉',
+      score: 'Journée légère 🟢', count: 0
+    });
+
     const emails = await Promise.all(data.messages.slice(0, 10).map(async msg => {
-      const { data: full } = await gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] });
-      const headers = full.payload.headers;
-      return { subject: headers.find(h => h.name === 'Subject')?.value || '(sans sujet)', from: headers.find(h => h.name === 'From')?.value || 'Inconnu', snippet: full.snippet };
+      try {
+        const { data: full } = await gmail.users.messages.get({
+          userId: 'me', id: msg.id, format: 'metadata',
+          metadataHeaders: ['Subject', 'From']
+        });
+        const headers = full.payload.headers;
+        return {
+          subject: headers.find(h => h.name === 'Subject')?.value || '(sans sujet)',
+          from: headers.find(h => h.name === 'From')?.value || 'Inconnu',
+          snippet: full.snippet || ''
+        };
+      } catch { return null; }
     }));
 
+    const validEmails = emails.filter(Boolean);
+
+    // Real AI summary
     const summaryMsg = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,
+      max_tokens: 800,
       messages: [{
         role: 'user',
-        content: `Tu es un assistant IA premium. Analyse ces emails et retourne un JSON UNIQUEMENT (pas de markdown, pas de texte avant/après):
+        content: `You are an executive AI email assistant. Analyze these real emails and return ONLY a valid JSON object (no markdown, no explanation):
 {
-  "intro": "phrase courte et humaine décrivant la journée (max 15 mots)",
+  "intro": "short human sentence about today's email load (max 15 words)",
   "score": "Journée légère 🟢 | Journée chargée 🟠 | Journée intense 🔴",
   "items": [
     {
       "priority": "urgent | important | info",
       "category": "💰 Finance | 📦 Commandes | 👤 Personnel | ⚠️ Action requise | 📅 Rendez-vous | 💼 Travail",
-      "title": "titre ultra court (max 5 mots)",
-      "action": "action recommandée courte ou 'Aucune action'",
-      "from": "nom expéditeur court"
+      "title": "ultra short title (max 5 words)",
+      "action": "recommended action or 'Aucune action'",
+      "from": "short sender name"
     }
   ]
 }
 
-Emails:
-${emails.map(e => `- De: ${e.from} | Sujet: ${e.subject} | Aperçu: ${e.snippet}`).join('\n')}`
+Emails to analyze:
+${validEmails.map(e => `From: ${e.from} | Subject: ${e.subject} | Preview: ${e.snippet}`).join('\n')}`
       }]
     });
 
@@ -433,75 +634,101 @@ ${emails.map(e => `- De: ${e.from} | Sujet: ${e.subject} | Aperçu: ${e.snippet}
     try {
       const text = summaryMsg.content[0].text.replace(/```json|```/g, '').trim();
       parsed = JSON.parse(text);
-    } catch(e) {
-      parsed = { intro: 'Voici tes emails importants du jour.', score: 'Journée 🟡', items: emails.map(e => ({ priority: 'info', category: '📧 Email', title: e.subject.slice(0, 30), action: 'À vérifier', from: e.from.split('<')[0].trim() })) };
+    } catch (e) {
+      parsed = {
+        intro: 'Voici tes emails importants du jour.',
+        score: 'Journée 🟡',
+        items: validEmails.map(e => ({
+          priority: 'info',
+          category: '📧 Email',
+          title: e.subject.slice(0, 30),
+          action: 'À vérifier',
+          from: e.from.split('<')[0].trim()
+        }))
+      };
     }
 
-    res.json({ ...parsed, count: emails.length });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.json({ ...parsed, count: validEmails.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ─── /api/subscriptions — REAL account detection ─────────────────────────────
 app.get('/api/subscriptions', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
   if (!isPro) {
-    const usedSubs = checkWeeklyLimit(req.session.email, 'subscriptions');
-    if (usedSubs >= FREE_LIMIT) return res.status(429).json({ error: 'FREE_LIMIT', message: 'Limite hebdomadaire atteinte (3/semaine). Passe à Pro pour un accès illimité 🚀', used: usedSubs, limit: FREE_LIMIT });
+    const used = checkWeeklyLimit(req.session.email, 'subscriptions');
+    if (used >= FREE_LIMIT) return res.status(429).json({
+      error: 'FREE_LIMIT',
+      message: 'Limite hebdomadaire atteinte. Passe à Pro pour un accès illimité.',
+      used, limit: FREE_LIMIT
+    });
     incrementWeeklyUsage(req.session.email, 'subscriptions');
   }
   try {
     const gmail = await getGmailClient(req.session.tokens);
+
+    // Search real registration/subscription emails
     const queries = [
-      'subject:(bienvenue OR welcome OR "compte créé" OR "account created" OR "verify your email" OR "confirmez votre email")',
-      'subject:("thank you for registering" OR "merci de vous être inscrit" OR "activation" OR "activate your account")'
+      'subject:(bienvenue OR welcome OR "compte créé" OR "account created" OR "verify your email" OR "confirmez")',
+      'subject:("thank you for registering" OR "merci de vous être inscrit" OR "activate your account" OR "activation")',
+      'subject:(unsubscribe OR "se désinscrire" OR newsletter OR subscription)'
     ];
-    
+
     const allMessages = [];
     for (const q of queries) {
-      const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 100, q });
-      if (data.messages) allMessages.push(...data.messages);
+      try {
+        const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 100, q });
+        if (data.messages) allMessages.push(...data.messages);
+      } catch (e) { console.error('Query error:', e.message); }
     }
 
     const seen = new Set();
     const subscriptions = [];
 
-    const fetched = await Promise.all(allMessages.slice(0, 50).map(msg =>
-      gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From', 'Date'] })
-        .then(r => ({ id: msg.id, data: r.data }))
-        .catch(() => null)
+    const fetched = await Promise.all(allMessages.slice(0, 60).map(msg =>
+      gmail.users.messages.get({
+        userId: 'me', id: msg.id, format: 'metadata',
+        metadataHeaders: ['Subject', 'From', 'Date']
+      }).then(r => ({ id: msg.id, data: r.data })).catch(() => null)
     ));
 
-    for (const item of fetched) {
-      if (!item) continue;
+    for (const item of fetched.filter(Boolean)) {
       const headers = item.data.payload.headers;
       const from = headers.find(h => h.name === 'From')?.value || '';
       const subject = headers.find(h => h.name === 'Subject')?.value || '';
       const date = headers.find(h => h.name === 'Date')?.value || '';
+
       const domainMatch = from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-      const domain = domainMatch ? domainMatch[1].replace(/^mail\.|^email\.|^noreply\.|^no-reply\.|^info\.|^hello\./, '') : null;
+      const domain = domainMatch
+        ? domainMatch[1].replace(/^mail\.|^email\.|^noreply\.|^no-reply\.|^info\.|^hello\.|^contact\./, '')
+        : null;
       if (!domain || seen.has(domain)) continue;
       seen.add(domain);
 
-      // Categorize
       const d = domain.toLowerCase();
       let category = '🌐 Autre';
-      if (['facebook', 'instagram', 'twitter', 'tiktok', 'linkedin', 'snapchat', 'pinterest'].some(s => d.includes(s))) category = '📱 Réseaux sociaux';
-      else if (['amazon', 'ebay', 'etsy', 'aliexpress', 'shein', 'zalando', 'cdiscount', 'fnac'].some(s => d.includes(s))) category = '🛒 Shopping';
-      else if (['netflix', 'spotify', 'deezer', 'disney', 'youtube', 'twitch', 'steam'].some(s => d.includes(s))) category = '🎬 Entertainment';
-      else if (['google', 'microsoft', 'apple', 'dropbox', 'notion', 'slack', 'zoom'].some(s => d.includes(s))) category = '💼 Productivité';
-      else if (['paypal', 'stripe', 'revolut', 'boursorama', 'bnp', 'credit'].some(s => d.includes(s))) category = '💳 Finance';
-      else if (['gmail', 'yahoo', 'outlook', 'hotmail', 'proton'].some(s => d.includes(s))) category = '📧 Email';
+      if (['facebook', 'instagram', 'twitter', 'tiktok', 'linkedin', 'snapchat', 'pinterest', 'x.com'].some(s => d.includes(s))) category = '📱 Réseaux sociaux';
+      else if (['amazon', 'ebay', 'etsy', 'aliexpress', 'shein', 'zalando', 'cdiscount', 'fnac', 'leboncoin'].some(s => d.includes(s))) category = '🛒 Shopping';
+      else if (['netflix', 'spotify', 'deezer', 'disney', 'youtube', 'twitch', 'steam', 'apple'].some(s => d.includes(s))) category = '🎬 Entertainment';
+      else if (['google', 'microsoft', 'apple', 'dropbox', 'notion', 'slack', 'zoom', 'github', 'atlassian'].some(s => d.includes(s))) category = '💼 Productivité';
+      else if (['paypal', 'stripe', 'revolut', 'boursorama', 'bnp', 'credit', 'banque', 'lydia', 'sumeria'].some(s => d.includes(s))) category = '💳 Finance';
 
       const year = date ? new Date(date).getFullYear() : null;
-      const isOld = year && year < 2020;
+      const isOld = year && year < new Date().getFullYear() - 3;
 
       subscriptions.push({ id: item.id, from, subject, date, domain, category, isOld, year });
     }
 
     res.json({ subscriptions, total: subscriptions.length });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ─── /api/unsubscribe — Send RGPD deletion request ───────────────────────────
 app.post('/api/unsubscribe', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const { domain } = req.body;
@@ -509,25 +736,36 @@ app.post('/api/unsubscribe', async (req, res) => {
     const oauth2Client = getOAuthClient();
     oauth2Client.setCredentials(req.session.tokens);
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
     const aiMsg = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
-      messages: [{ role: 'user', content: `Rédige un email court et professionnel en français pour demander la suppression de mon compte sur ${domain} et de toutes mes données (RGPD). Corps uniquement, sans objet ni signature.` }]
+      messages: [{
+        role: 'user',
+        content: `Write a short professional email in French to request account deletion and data removal from ${domain} under GDPR. Return only the email body, no subject, no signature.`
+      }]
     });
+
     const emailBody = aiMsg.content[0].text;
-    const emailContent = [`To: support@${domain}`, `Subject: Demande de suppression de compte - ${domain}`, `Content-Type: text/plain; charset=utf-8`, ``, emailBody].join('\n');
-    const encoded = Buffer.from(emailContent).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    const emailContent = [
+      `To: privacy@${domain}`,
+      `Subject: Demande de suppression de compte et données - RGPD`,
+      `Content-Type: text/plain; charset=utf-8`,
+      ``,
+      emailBody
+    ].join('\n');
+
+    const encoded = Buffer.from(emailContent).toString('base64')
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     await gmail.users.messages.send({ userId: 'me', requestBody: { raw: encoded } });
+
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
-
-const PORT = process.env.PORT || 3000;
-// ─── AUTO-FILTER LIVE (polling toutes les 30s) ────────────────────────────────
-// Garde en mémoire le dernier historyId par user pour détecter uniquement les nouveaux emails
+// ─── /api/auto-filter — Live filter for Pro users ────────────────────────────
 const lastHistoryId = {};
 
 app.post('/api/auto-filter', async (req, res) => {
@@ -538,23 +776,18 @@ app.post('/api/auto-filter', async (req, res) => {
   try {
     const gmail = await getGmailClient(req.session.tokens);
     const email = req.session.email;
-
-    // Récupère le historyId actuel
     const profile = await gmail.users.getProfile({ userId: 'me' });
     const currentHistoryId = profile.data.historyId;
 
-    // Premier appel — on initialise juste le curseur, rien à filtrer
     if (!lastHistoryId[email]) {
       lastHistoryId[email] = currentHistoryId;
       return res.json({ filtered: 0, newMessages: 0, initialized: true });
     }
 
-    // Pas de changement depuis le dernier check
     if (currentHistoryId === lastHistoryId[email]) {
       return res.json({ filtered: 0, newMessages: 0 });
     }
 
-    // Récupère l'historique depuis le dernier check
     let newMessages = [];
     try {
       const history = await gmail.users.history.list({
@@ -575,20 +808,18 @@ app.post('/api/auto-filter', async (req, res) => {
         });
       }
     } catch (e) {
-      // historyId expiré — on remet à jour et on repart
       lastHistoryId[email] = currentHistoryId;
       return res.json({ filtered: 0, newMessages: 0, reset: true });
     }
 
     lastHistoryId[email] = currentHistoryId;
-
     if (!newMessages.length) return res.json({ filtered: 0, newMessages: 0 });
 
-    // Récupère le label Zappie
     const labelId = await ensureZappieLabel(gmail);
+    let filtered = 0;
+    const filteredEmails = [];
 
-    // Analyse les nouveaux emails en parallèle
-    const analyzed = await Promise.all(newMessages.map(async (msg) => {
+    await Promise.all(newMessages.map(async (msg) => {
       try {
         const full = await gmail.users.messages.get({
           userId: 'me', id: msg.id, format: 'metadata',
@@ -598,23 +829,16 @@ app.post('/api/auto-filter', async (req, res) => {
         const subject = headers.find(h => h.name === 'Subject')?.value || '';
         const from = headers.find(h => h.name === 'From')?.value || '';
         const snippet = full.data.snippet || '';
-        const decision = await analyzeEmailWithAI(subject, from, snippet);
-        return { id: msg.id, subject, from, decision };
-      } catch (e) { return null; }
-    }));
-
-    // Filtre les inutiles
-    let filtered = 0;
-    const filteredEmails = [];
-    await Promise.all(analyzed.filter(Boolean).map(async (email) => {
-      if (email.decision === 'INUTILE') {
-        await gmail.users.messages.modify({
-          userId: 'me', id: email.id,
-          requestBody: { addLabelIds: [labelId], removeLabelIds: ['INBOX'] }
-        });
-        filtered++;
-        filteredEmails.push({ subject: email.subject, from: email.from });
-      }
+        const { isUseless } = await analyzeEmailWithAI(subject, from, snippet);
+        if (isUseless) {
+          await gmail.users.messages.modify({
+            userId: 'me', id: msg.id,
+            requestBody: { addLabelIds: [labelId], removeLabelIds: ['INBOX'] }
+          });
+          filtered++;
+          filteredEmails.push({ subject, from });
+        }
+      } catch (e) { console.error('Auto-filter item error:', e.message); }
     }));
 
     res.json({ filtered, newMessages: newMessages.length, emails: filteredEmails });
@@ -624,11 +848,7 @@ app.post('/api/auto-filter', async (req, res) => {
   }
 });
 
-// ─── STRIPE PAIEMENT ──────────────────────────────────────────────────────────
-const PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_1TVchf8UsIPkunXGdzoJWrOo';
-const APP_URL = process.env.APP_URL || 'http://localhost:3000';
-
-// Créer une session de paiement Stripe
+// ─── STRIPE ───────────────────────────────────────────────────────────────────
 app.post('/api/create-checkout', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
@@ -648,16 +868,13 @@ app.post('/api/create-checkout', async (req, res) => {
   }
 });
 
-// Vérifier si l'utilisateur est Pro
 app.get('/api/subscription-status', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
     const customers = await stripe.customers.list({ email: req.session.email, limit: 1 });
     if (!customers.data.length) return res.json({ isPro: false });
     const subscriptions = await stripe.subscriptions.list({
-      customer: customers.data[0].id,
-      status: 'active',
-      limit: 1
+      customer: customers.data[0].id, status: 'active', limit: 1
     });
     res.json({ isPro: subscriptions.data.length > 0 });
   } catch (err) {
@@ -665,12 +882,13 @@ app.get('/api/subscription-status', async (req, res) => {
   }
 });
 
-// Page pricing
+// ─── PAGES ────────────────────────────────────────────────────────────────────
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/pricing', (req, res) => {
   const pricingPath = path.join(__dirname, 'public', 'pricing.html');
-  res.sendFile(pricingPath, (err) => {
-    if (err) res.redirect('/dashboard');
-  });
+  res.sendFile(pricingPath, (err) => { if (err) res.redirect('/'); });
 });
 
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Zappie tourne sur http://localhost:${PORT}`));
