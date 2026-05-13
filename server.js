@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const session = require('express-session');
+const FileStore = require('session-file-store')(session);
 const cors = require('cors');
 const { google } = require('googleapis');
 const Anthropic = require('@anthropic-ai/sdk');
@@ -15,6 +16,7 @@ app.use(cors({
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
+  store: new FileStore({ path: '/tmp/sessions', retries: 1 }),
   secret: process.env.SESSION_SECRET || 'zappie-secret',
   resave: false,
   saveUninitialized: false,
