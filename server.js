@@ -9,6 +9,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const path = require('path');
 
 const app = express();
+app.set('trust proxy', 1); // Required for Railway/Heroku proxy
 app.use(express.json());
 app.use(cors({
   origin: process.env.APP_URL || 'http://localhost:3000',
@@ -67,7 +68,14 @@ app.get('/auth/callback', async (req, res) => {
     const { data } = await oauth2.userinfo.get();
     req.session.tokens = tokens;
     req.session.email = data.email;
-    res.redirect('/dashboard');
+    // Force session save before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.redirect('/?error=session_failed');
+      }
+      res.redirect('/dashboard');
+    });
   } catch (err) {
     console.error('Auth callback error:', err);
     res.redirect('/?error=auth_failed');
