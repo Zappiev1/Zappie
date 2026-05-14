@@ -171,25 +171,37 @@ async function analyzeEmailWithAI(subject, from, snippet) {
         max_tokens: 30,
         messages: [{
           role: 'user',
-          content: `Classify this email. Reply with ONLY one word: IMPORTANT, PROMOTION, NEWSLETTER, NOTIFICATION, or SPAM.
+          content: `You are a VERY CONSERVATIVE email classifier. Your job is to ONLY move clearly useless emails. When in doubt, always reply IMPORTANT.
+
+Reply with ONLY one word: IMPORTANT, PROMOTION, NEWSLETTER, NOTIFICATION, or SPAM.
 
 From: ${from}
 Subject: ${subject}
 Preview: ${snippet}
 
-Rules:
-- IMPORTANT: personal emails, work, invoices, appointments, bank, delivery
-- PROMOTION: sales, discounts, offers, marketing
-- NEWSLETTER: digests, blog updates, weekly/monthly content
-- NOTIFICATION: app alerts, social media, automated system messages
-- SPAM: unsolicited, suspicious, irrelevant
+STRICT RULES — mark as IMPORTANT if ANY of these apply:
+- Sender is a real person (not a noreply/marketing address)
+- Contains: invoice, facture, commande, order, payment, paiement, bank, banque, compte, contrat, contract, devis, quote
+- Contains: réunion, meeting, rendez-vous, appointment, deadline, urgent, action required
+- Contains: livraison, delivery, tracking, suivi, colis
+- Contains: job, emploi, candidature, application, recrutement
+- From a company you might do business with
+- Any legal or administrative content
+- Anything that could require a response or action
+
+ONLY mark as PROMOTION if it's 100% clearly a marketing/sales email with discounts or offers.
+ONLY mark as NEWSLETTER if it's clearly a blog/digest/weekly update with no personal relevance.
+ONLY mark as SPAM if it's obviously unsolicited junk.
+ONLY mark as NOTIFICATION if it's a minor automated alert (social media like, follow, etc).
+
+When in doubt: reply IMPORTANT.
 
 Reply with ONE WORD only.`
         }]
       });
       const result = message.content[0].text.trim().toUpperCase();
       const validCategories = ['IMPORTANT', 'PROMOTION', 'NEWSLETTER', 'NOTIFICATION', 'SPAM'];
-      const category = validCategories.find(c => result.includes(c)) || 'NOTIFICATION';
+      const category = validCategories.find(c => result.includes(c)) || 'IMPORTANT';
       const isUseless = category !== 'IMPORTANT';
       return { category, isUseless };
     } catch (e) {
@@ -197,11 +209,11 @@ Reply with ONE WORD only.`
         await sleep(2000 * (attempts + 1));
         attempts++;
       } else {
-        return { category: 'NOTIFICATION', isUseless: true };
+        return { category: 'IMPORTANT', isUseless: false };
       }
     }
   }
-  return { category: 'NOTIFICATION', isUseless: true };
+  return { category: 'IMPORTANT', isUseless: false };
 }
 
 // ─── /api/me ─────────────────────────────────────────────────────────────────
@@ -299,7 +311,7 @@ app.post('/api/analyze', async (req, res) => {
       // Fetch real metadata in parallel
       const fetched = await Promise.all(batch.map(msg =>
         gmail.users.messages.get({
-          userId: 'me', id: msg.id, format: 'metadata',
+          userId: 'me', id: msg.id, format: 'full',
           metadataHeaders: ['Subject', 'From']
         }).then(r => ({ id: msg.id, data: r.data })).catch(() => null)
       ));
@@ -312,7 +324,17 @@ app.post('/api/analyze', async (req, res) => {
         const from = headers.find(h => h.name === 'From')?.value || 'Inconnu';
         const snippet = full.snippet || '';
 
-        const { category, isUseless } = await analyzeEmailWithAI(subject, from, snippet);
+        // If email has attachments, always keep as IMPORTANT
+        const hasParts = full.payload.parts && full.payload.parts.length > 0;
+        const hasAttachment = hasParts && full.payload.parts.some(p => p.filename && p.filename.length > 0);
+
+        let category, isUseless;
+        if (hasAttachment) {
+          category = 'IMPORTANT';
+          isUseless = false;
+        } else {
+          ({ category, isUseless } = await analyzeEmailWithAI(subject, from, snippet));
+        }
 
         if (isUseless) {
           try {
