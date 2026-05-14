@@ -243,21 +243,22 @@ app.get('/api/stats', async (req, res) => {
   try {
     const gmail = await getGmailClient(req.session.tokens);
 
-    // Real inbox count — only INBOX label, excluding promotions/social/updates
-    const { data: inboxData } = await gmail.users.messages.list({
-      userId: 'me', maxResults: 1,
-      q: 'in:inbox -in:promotions -in:social -in:updates -in:forums'
-    });
-    const inboxCount = inboxData.resultSizeEstimate || 0;
+    // Use labels API for accurate counts
+    const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
+    
+    // Get real INBOX count from label info
+    const inboxLabel = labelsData.labels.find(l => l.id === 'INBOX');
+    let inboxCount = 0;
+    if (inboxLabel) {
+      const { data: inboxInfo } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
+      inboxCount = inboxInfo.messagesUnread || inboxInfo.messagesTotal || 0;
+    }
 
     // Real Zappie label count
-    const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
     const zappieLabel = labelsData.labels.find(l => l.name === 'Zappie');
     let zappieCount = 0;
     if (zappieLabel) {
-      const { data: zappieData } = await gmail.users.labels.get({
-        userId: 'me', id: zappieLabel.id
-      });
+      const { data: zappieData } = await gmail.users.labels.get({ userId: 'me', id: zappieLabel.id });
       zappieCount = zappieData.messagesTotal || 0;
     }
 
