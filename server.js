@@ -243,9 +243,10 @@ app.get('/api/stats', async (req, res) => {
   try {
     const gmail = await getGmailClient(req.session.tokens);
 
-    // Real inbox count
+    // Real inbox count — only INBOX label, excluding promotions/social/updates
     const { data: inboxData } = await gmail.users.messages.list({
-      userId: 'me', maxResults: 1, labelIds: ['INBOX']
+      userId: 'me', maxResults: 1,
+      q: 'in:inbox -in:promotions -in:social -in:updates -in:forums'
     });
     const inboxCount = inboxData.resultSizeEstimate || 0;
 
