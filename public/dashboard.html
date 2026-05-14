@@ -204,7 +204,11 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
   <a href="/" class="logo"><div class="logo-icon">⚡</div>Zappie</a>
   <div class="nav-right">
     <div class="ai-status"><div class="ai-dot"></div>IA Active</div>
-    <div class="live-badge" id="live-badge"><div class="ai-dot" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan)"></div><span id="live-badge-text">⚡ Live Filter</span></div>
+    <div class="live-badge" id="live-badge" onclick="toggleLiveFilter()">
+      <div class="ai-dot" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan)" id="live-dot"></div>
+      <span id="live-badge-text">⚡ Live Filter</span>
+      <span id="live-toggle-label" style="font-size:10px;font-weight:700;background:rgba(6,182,212,0.2);padding:2px 7px;border-radius:100px;color:var(--cyan)">ON</span>
+    </div>
     <span id="user-email"></span>
     <button class="nav-upgrade-btn" id="nav-upgrade-btn" style="display:none" onclick="goToPro()">⚡ Passer à Pro</button>
     <button class="btn-logout" onclick="location.href='/auth/logout'">Déconnexion</button>
@@ -400,10 +404,11 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
 var allSubs = [];
 var storageEmails = [];
 var selectedPeriod = 6;
-var sessionAnalyzed = 0;
+var sessionAnalyzed = parseInt(localStorage.getItem('zappie_analyzed') || '0');
 var isProUser = false;
-var liveFilterCount = 0;
+var liveFilterCount = parseInt(localStorage.getItem('zappie_live') || '0');
 var liveFilterInterval = null;
+var statsRefreshInterval = null;
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
@@ -424,6 +429,18 @@ async function init() {
 
     // Load zappie emails
     loadZappieEmails();
+
+    // Restore persisted counters
+    if (sessionAnalyzed > 0) {
+      document.getElementById('stat-analyzed').textContent = sessionAnalyzed.toLocaleString('fr-FR');
+    }
+    if (liveFilterCount > 0) {
+      document.getElementById('stat-live').textContent = liveFilterCount;
+      document.getElementById('live-badge-text').textContent = '⚡ ' + liveFilterCount + ' filtrés en live';
+    }
+
+    // Auto-refresh inbox count every 60 seconds
+    statsRefreshInterval = setInterval(loadRealStats, 60000);
 
     // Start live filter for Pro
     if (isProUser) startLiveFilter();
@@ -527,6 +544,7 @@ async function analyzeEmails() {
 
     // Update real counters
     sessionAnalyzed += data.processed || 0;
+    localStorage.setItem('zappie_analyzed', sessionAnalyzed);
     document.getElementById('stat-analyzed').textContent = sessionAnalyzed.toLocaleString('fr-FR');
 
     // Update inbox count with real value from server
@@ -877,6 +895,39 @@ async function unsubscribe(domain, id) {
 }
 
 // ── LIVE FILTER (Pro) ─────────────────────────────────────────────────────────
+var liveFilterActive = true;
+
+function toggleLiveFilter() {
+  liveFilterActive = !liveFilterActive;
+  var label = document.getElementById('live-toggle-label');
+  var dot = document.getElementById('live-dot');
+  var badge = document.getElementById('live-badge');
+
+  if (liveFilterActive) {
+    // Turn ON
+    label.textContent = 'ON';
+    label.style.background = 'rgba(6,182,212,0.2)';
+    label.style.color = 'var(--cyan)';
+    dot.style.background = 'var(--cyan)';
+    dot.style.boxShadow = '0 0 8px var(--cyan)';
+    badge.style.borderColor = 'rgba(6,182,212,0.4)';
+    badge.style.opacity = '1';
+    if (!liveFilterInterval) startLiveFilter();
+    showToast('⚡ Live Filter activé !');
+  } else {
+    // Turn OFF
+    label.textContent = 'OFF';
+    label.style.background = 'rgba(255,255,255,0.05)';
+    label.style.color = 'var(--text3)';
+    dot.style.background = 'var(--text3)';
+    dot.style.boxShadow = 'none';
+    badge.style.borderColor = 'var(--border2)';
+    badge.style.opacity = '0.6';
+    if (liveFilterInterval) { clearInterval(liveFilterInterval); liveFilterInterval = null; }
+    showToast('⏸ Live Filter désactivé');
+  }
+}
+
 async function startLiveFilter() {
   document.getElementById('live-badge').style.display = 'flex';
   document.getElementById('live-stat-card').style.display = 'block';
@@ -891,6 +942,7 @@ async function startLiveFilter() {
       var data = await res.json();
       if (data.filtered > 0) {
         liveFilterCount += data.filtered;
+        localStorage.setItem('zappie_live', liveFilterCount);
         document.getElementById('stat-live').textContent = liveFilterCount;
         document.getElementById('live-badge-text').textContent = '⚡ ' + liveFilterCount + ' filtrés en live';
         showToast('⚡ ' + data.filtered + ' email(s) filtrés automatiquement !');
