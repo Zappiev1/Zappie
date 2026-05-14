@@ -280,6 +280,30 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
 
   <!-- Stockage -->
   <div class="tab-content" id="tab-stockage">
+    <div id="quota-card" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:1.5rem;margin-bottom:1.5rem;">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">💾 Stockage Google réel</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem;">
+        <div style="text-align:center;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:14px;padding:1rem;">
+          <div style="font-size:22px;font-weight:900;color:var(--red)" id="quota-used">—</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;">Utilisé</div>
+        </div>
+        <div style="text-align:center;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:14px;padding:1rem;">
+          <div style="font-size:22px;font-weight:900;color:var(--green)" id="quota-free">—</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;">Disponible</div>
+        </div>
+        <div style="text-align:center;background:rgba(124,92,252,0.08);border:1px solid rgba(124,92,252,0.2);border-radius:14px;padding:1rem;">
+          <div style="font-size:22px;font-weight:900;color:var(--purple2)" id="quota-total">—</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;">Total</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border-radius:100px;height:10px;overflow:hidden;margin-bottom:6px;">
+        <div id="quota-bar" style="height:100%;border-radius:100px;background:linear-gradient(90deg,var(--green),var(--amber),var(--red));transition:width 1s ease;width:0%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;color:var(--text2)" id="quota-pct-text">Chargement...</div>
+        <div id="quota-warning" style="display:none;font-size:11px;color:var(--red);font-weight:700;">⚠️ Stockage presque plein !</div>
+      </div>
+    </div>
     <div id="storage-hero-section" style="display:none">
       <div class="storage-dashboard">
         <div class="storage-hero-card">
@@ -289,7 +313,7 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
           <div class="storage-bar-bg"><div class="storage-bar-fill" id="storage-bar" style="width:0%"></div></div>
         </div>
         <div class="storage-equiv-card">
-          <div class="storage-equiv-icon" id="storage-equiv-icon">📸</div>
+          <div class="storage-equiv-icon" id="storage-equiv-icon" style="font-size:48px;margin-bottom:10px;">📦</div>
           <div class="storage-equiv-text" id="storage-equiv-text">Lance le scan</div>
           <div class="storage-equiv-sub" id="storage-equiv-sub">pour voir l'impact</div>
         </div>
@@ -404,9 +428,10 @@ main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-inde
 var allSubs = [];
 var storageEmails = [];
 var selectedPeriod = 6;
-var sessionAnalyzed = parseInt(localStorage.getItem('zappie_analyzed') || '0');
+var currentUserEmail = '';
+var sessionAnalyzed = 0;
 var isProUser = false;
-var liveFilterCount = parseInt(localStorage.getItem('zappie_live') || '0');
+var liveFilterCount = 0;
 var liveFilterInterval = null;
 var statsRefreshInterval = null;
 
@@ -419,6 +444,11 @@ async function init() {
 
     document.getElementById('user-email').textContent = data.email;
     isProUser = data.isPro || false;
+    currentUserEmail = data.email;
+
+    // Load counters tied to this specific user account
+    sessionAnalyzed = parseInt(localStorage.getItem('zappie_analyzed_' + currentUserEmail) || '0');
+    liveFilterCount = parseInt(localStorage.getItem('zappie_live_' + currentUserEmail) || '0');
 
     if (!isProUser) {
       document.getElementById('nav-upgrade-btn').style.display = 'block';
@@ -438,6 +468,9 @@ async function init() {
       document.getElementById('stat-live').textContent = liveFilterCount;
       document.getElementById('live-badge-text').textContent = '⚡ ' + liveFilterCount + ' filtrés en live';
     }
+
+    // Load real storage quota
+    loadStorageQuota();
 
     // Auto-refresh inbox count every 60 seconds
     statsRefreshInterval = setInterval(loadRealStats, 60000);
@@ -544,7 +577,7 @@ async function analyzeEmails() {
 
     // Update real counters
     sessionAnalyzed += data.processed || 0;
-    localStorage.setItem('zappie_analyzed', sessionAnalyzed);
+    localStorage.setItem('zappie_analyzed_' + currentUserEmail, sessionAnalyzed);
     document.getElementById('stat-analyzed').textContent = sessionAnalyzed.toLocaleString('fr-FR');
 
     // Update inbox count with real value from server
@@ -601,6 +634,29 @@ async function deleteEmail(id) {
   } catch(e) { showToast('❌ Erreur'); }
 }
 
+// ── STORAGE QUOTA ─────────────────────────────────────────────────────────────
+async function loadStorageQuota() {
+  try {
+    var res = await fetch('/api/storage-quota');
+    if (!res.ok) return;
+    var data = await res.json();
+    if (data.error) return;
+
+    document.getElementById('quota-card').style.display = 'block';
+    document.getElementById('quota-used').textContent = data.usedFormatted;
+    document.getElementById('quota-free').textContent = data.freeFormatted;
+    document.getElementById('quota-total').textContent = data.totalFormatted;
+    document.getElementById('quota-bar').style.width = data.pct + '%';
+    document.getElementById('quota-pct-text').textContent = data.pct + '% utilisé sur ' + data.totalFormatted;
+
+    if (data.isAlmostFull) {
+      document.getElementById('quota-warning').style.display = 'block';
+    }
+  } catch(e) {
+    console.error('Quota error:', e);
+  }
+}
+
 // ── STORAGE ───────────────────────────────────────────────────────────────────
 function bytesToEquiv(bytes) {
   var mb = bytes / (1024 * 1024);
@@ -645,6 +701,9 @@ async function loadStorage() {
     document.getElementById('storage-equiv-icon').textContent = equiv.icon;
     document.getElementById('storage-equiv-text').textContent = equiv.text;
     document.getElementById('storage-equiv-sub').textContent = equiv.sub;
+
+    // Hide scan button after successful scan
+    document.getElementById('btn-storage').style.display = 'none';
 
     var html = '<div class="section-title">Top emails par taille — données réelles Gmail</div><div class="email-list">';
     storageEmails.forEach(function(e) {
@@ -942,7 +1001,7 @@ async function startLiveFilter() {
       var data = await res.json();
       if (data.filtered > 0) {
         liveFilterCount += data.filtered;
-        localStorage.setItem('zappie_live', liveFilterCount);
+        localStorage.setItem('zappie_live_' + currentUserEmail, liveFilterCount);
         document.getElementById('stat-live').textContent = liveFilterCount;
         document.getElementById('live-badge-text').textContent = '⚡ ' + liveFilterCount + ' filtrés en live';
         showToast('⚡ ' + data.filtered + ' email(s) filtrés automatiquement !');

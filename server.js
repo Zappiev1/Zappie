@@ -52,7 +52,8 @@ app.get('/auth/google', (req, res) => {
     prompt: 'consent',
     scope: [
       'https://www.googleapis.com/auth/gmail.modify',
-      'https://www.googleapis.com/auth/userinfo.email'
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/drive.metadata.readonly'
     ]
   });
   res.redirect(url);
@@ -444,7 +445,33 @@ app.delete('/api/delete/:id', async (req, res) => {
   }
 });
 
-// ─── /api/storage — REAL attachment sizes ────────────────────────────────────
+// ─── /api/storage-quota — REAL Google account storage ────────────────────────
+app.get('/api/storage-quota', async (req, res) => {
+  if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const oauth2Client = getOAuthClient();
+    oauth2Client.setCredentials(req.session.tokens);
+    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+    const { data } = await drive.about.get({ fields: 'storageQuota' });
+    const quota = data.storageQuota;
+    const used = parseInt(quota.usage || 0);
+    const total = parseInt(quota.limit || 15 * 1024 * 1024 * 1024); // 15GB default
+    const usedInGmail = parseInt(quota.usageInDriveTrash || 0);
+    const pct = Math.round((used / total) * 100);
+    res.json({
+      used,
+      total,
+      usedFormatted: formatSize(used),
+      totalFormatted: formatSize(total),
+      freeFormatted: formatSize(total - used),
+      pct,
+      isAlmostFull: pct > 80
+    });
+  } catch (err) {
+    console.error('Storage quota error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 app.get('/api/storage', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   const isPro = await checkIsPro(req.session.email);
@@ -921,6 +948,8 @@ app.get('/api/subscription-status', async (req, res) => {
 // ─── PAGES ────────────────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacy.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'public', 'terms.html')));
 app.get('/pricing', (req, res) => {
   const pricingPath = path.join(__dirname, 'public', 'pricing.html');
   res.sendFile(pricingPath, (err) => { if (err) res.redirect('/'); });

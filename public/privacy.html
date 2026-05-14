@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Zappie — Politique de confidentialité</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#080810;--bg2:#0d0d1a;--purple:#7c5cfc;--purple2:#a78bfa;--text:#f0eeff;--text2:#9490b8;--text3:#4a4870;--border2:rgba(255,255,255,0.06);--green:#22c55e;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Cabinet Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(124,92,252,0.1),transparent);pointer-events:none;}
+nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;border-bottom:1px solid var(--border2);}
+.logo{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:900;text-decoration:none;color:var(--text);}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--purple),var(--purple2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+main{max-width:720px;margin:0 auto;padding:4rem 2rem;position:relative;z-index:1;}
+h1{font-size:36px;font-weight:900;letter-spacing:-1px;margin-bottom:8px;}
+.updated{font-size:13px;color:var(--text3);margin-bottom:3rem;}
+h2{font-size:18px;font-weight:800;margin:2.5rem 0 1rem;color:var(--purple2);}
+p{font-size:15px;color:var(--text2);line-height:1.8;margin-bottom:1rem;}
+ul{padding-left:1.5rem;margin-bottom:1rem;}
+li{font-size:15px;color:var(--text2);line-height:1.8;margin-bottom:6px;}
+a{color:var(--purple2);text-decoration:none;}
+.highlight-box{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:14px;padding:1.25rem 1.5rem;margin:2rem 0;}
+.highlight-box p{color:var(--green);margin:0;font-weight:600;}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="logo"><div class="logo-icon">⚡</div>Zappie</a>
+  <a href="/" style="font-size:13px;color:var(--text2);text-decoration:none;">← Retour à l'accueil</a>
+</nav>
+<main>
+  <h1>Politique de confidentialité</h1>
+  <div class="updated">Dernière mise à jour : 13 mai 2026</div>
+
+  <div class="highlight-box">
+    <p>✅ Zappie ne vend jamais vos données. Vos emails restent les vôtres. Nous n'accédons à vos emails que pour vous fournir le service.</p>
+  </div>
+
+  <h2>1. Qui sommes-nous ?</h2>
+  <p>Zappie est un assistant IA de gestion d'emails accessible via <a href="https://zappie.app">zappie.app</a>. Zappie vous aide à trier, nettoyer et gérer votre boîte Gmail grâce à l'intelligence artificielle.</p>
+
+  <h2>2. Quelles données collectons-nous ?</h2>
+  <p>Lorsque vous utilisez Zappie, nous accédons aux données suivantes :</p>
+  <ul>
+    <li><strong>Adresse email Google</strong> — pour identifier votre compte</li>
+    <li><strong>Métadonnées des emails</strong> — expéditeur, sujet, aperçu — pour l'analyse IA</li>
+    <li><strong>Informations de paiement</strong> — gérées exclusivement par Stripe, nous ne stockons aucune donnée bancaire</li>
+  </ul>
+  <p>Nous n'accédons <strong>jamais</strong> au contenu complet de vos emails sans nécessité, et nous ne stockons pas vos emails sur nos serveurs.</p>
+
+  <h2>3. Comment utilisons-nous vos données ?</h2>
+  <ul>
+    <li>Analyser vos emails pour les classer automatiquement</li>
+    <li>Générer votre Morning Brief quotidien</li>
+    <li>Détecter les services où vous êtes inscrit</li>
+    <li>Améliorer la qualité de notre service</li>
+  </ul>
+  <p>Nous n'utilisons <strong>jamais</strong> vos données à des fins publicitaires ou commerciales auprès de tiers.</p>
+
+  <h2>4. Partage des données</h2>
+  <p>Vos données ne sont jamais vendues. Elles peuvent être partagées uniquement avec :</p>
+  <ul>
+    <li><strong>Google</strong> — via l'API Gmail pour accéder à vos emails (OAuth sécurisé)</li>
+    <li><strong>Anthropic (Claude IA)</strong> — pour l'analyse et la classification des emails</li>
+    <li><strong>Stripe</strong> — pour le traitement sécurisé des paiements</li>
+    <li><strong>Railway</strong> — hébergement de l'application</li>
+  </ul>
+
+  <h2>5. Sécurité</h2>
+  <p>Nous mettons en place des mesures de sécurité pour protéger vos données :</p>
+  <ul>
+    <li>Connexion via OAuth 2.0 Google — aucun mot de passe stocké</li>
+    <li>Communications chiffrées via HTTPS</li>
+    <li>Tokens d'accès stockés de manière sécurisée en session</li>
+    <li>Accès limité au strict nécessaire (scope Gmail modify)</li>
+  </ul>
+
+  <h2>6. Vos droits (RGPD)</h2>
+  <p>Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez des droits suivants :</p>
+  <ul>
+    <li><strong>Droit d'accès</strong> — savoir quelles données nous détenons sur vous</li>
+    <li><strong>Droit de rectification</strong> — corriger vos données</li>
+    <li><strong>Droit à l'effacement</strong> — supprimer toutes vos données</li>
+    <li><strong>Droit à la portabilité</strong> — récupérer vos données</li>
+    <li><strong>Droit d'opposition</strong> — vous opposer au traitement</li>
+  </ul>
+  <p>Pour exercer ces droits, contactez-nous à : <a href="mailto:privacy@zappie.app">privacy@zappie.app</a></p>
+
+  <h2>7. Suppression de compte</h2>
+  <p>Vous pouvez supprimer votre compte et toutes vos données à tout moment en nous contactant à <a href="mailto:privacy@zappie.app">privacy@zappie.app</a>. Vous pouvez également révoquer l'accès de Zappie à votre compte Google depuis <a href="https://myaccount.google.com/permissions" target="_blank">myaccount.google.com/permissions</a>.</p>
+
+  <h2>8. Cookies</h2>
+  <p>Zappie utilise uniquement des cookies de session nécessaires au fonctionnement de l'application (maintien de votre connexion). Aucun cookie publicitaire ou de tracking n'est utilisé.</p>
+
+  <h2>9. Modifications</h2>
+  <p>Nous pouvons mettre à jour cette politique de confidentialité. En cas de modification importante, nous vous en informerons par email. La date de dernière mise à jour est indiquée en haut de cette page.</p>
+
+  <h2>10. Contact</h2>
+  <p>Pour toute question concernant cette politique de confidentialité :<br>
+  Email : <a href="mailto:privacy@zappie.app">privacy@zappie.app</a><br>
+  Site : <a href="https://zappie.app">zappie.app</a></p>
+</main>
+</body>
+</html>
