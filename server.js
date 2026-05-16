@@ -121,7 +121,10 @@ async function ensureZappieLabel(gmail) {
   return label.id;
 }
 
-async function analyzeEmailWithAI(subject, from, snippet) {
+async function analyzeEmailWithAI(subject, from, snippet, hasAttachment = false) {
+  // Protect emails with attachments always
+  if (hasAttachment) return 'IMPORTANT';
+
   const message = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 10,
@@ -129,9 +132,9 @@ async function analyzeEmailWithAI(subject, from, snippet) {
       role: 'user',
       content: `Email: De: ${from} | Sujet: ${subject} | Aperçu: ${snippet}
 Réponds UNIQUEMENT "IMPORTANT" ou "INUTILE".
-INUTILE = promotions, newsletters, notifications apps, réseaux sociaux, marketing, spam.
-IMPORTANT = emails perso, pro urgents, factures, rendez-vous, banque.
-En cas de doute: INUTILE.`
+IMPORTANT = emails perso, famille, amis, collègues, factures, rendez-vous, banque, livraisons, documents, contrats, urgences, vraies personnes.
+INUTILE = promotions, newsletters, notifications automatiques, réseaux sociaux, marketing, pub, spam, offres commerciales, noreply.
+Si l'email vient d'une vraie personne: IMPORTANT. En cas de doute: IMPORTANT.`
     }]
   });
   return message.content[0].text.trim().includes('IMPORTANT') ? 'IMPORTANT' : 'INUTILE';
@@ -187,19 +190,35 @@ app.post('/api/analyze', async (req, res) => {
 
       // Fetch metadata en parallèle
       const fetched = await Promise.all(batch.map(msg =>
-        gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From'] })
+        gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'metadata', metadataHeaders: ['Subject', 'From', 'Content-Type'] })
           .then(r => ({ id: msg.id, data: r.data }))
+          .catch(() => null)
       ));
 
-      // 10 agents IA en parallèle
-      const analyzed = await Promise.all(fetched.map(async ({ id, data: full }) => {
+      // Analyse séquentielle avec protection PJ
+      const analyzed = [];
+      for (const item of fetched.filter(Boolean)) {
+        const { id, data: full } = item;
         const headers = full.payload.headers;
         const subject = headers.find(h => h.name === 'Subject')?.value || '(sans sujet)';
         const from = headers.find(h => h.name === 'From')?.value || 'Inconnu';
         const snippet = full.snippet || '';
-        const decision = await analyzeEmailWithAI(subject, from, snippet);
-        return { id, subject, from, snippet, decision };
-      }));
+        // Detect attachment from payload parts
+        const hasAttachment = !!(full.payload.parts && full.payload.parts.some(p => p.filename && p.filename.length > 0)) || full.payload.mimeType === 'multipart/mixed';
+        let decision = 'INUTILE';
+        let attempts = 0;
+        while (attempts < 3) {
+          try {
+            decision = await analyzeEmailWithAI(subject, from, snippet, hasAttachment);
+            break;
+          } catch (e) {
+            if (e.status === 429) { await new Promise(r => setTimeout(r, 2000 * (attempts + 1))); attempts++; }
+            else break;
+          }
+        }
+        analyzed.push({ id, subject, from, snippet, decision, hasAttachment });
+        await new Promise(r => setTimeout(r, 150));
+      }
 
       // Move les INUTILE en parallèle
       await Promise.all(analyzed.map(async ({ id, decision }) => {
