@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Zappie — Analyse en cours...</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--purple:#7c5cfc;--purple2:#a78bfa;--glow:rgba(124,92,252,0.4);--bg:#080810;--text:#f0eeff;--text2:#9490b8;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;--cyan:#06b6d4;}
+body{font-family:'Cabinet Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,92,252,0.15),transparent);pointer-events:none;}
+
+.logo{position:fixed;top:1.5rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;font-size:18px;font-weight:900;}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--purple),var(--purple2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 20px var(--glow);}
+
+.scan-wrap{text-align:center;padding:2rem;max-width:560px;width:100%;position:relative;z-index:1;}
+
+.scan-title{font-size:28px;font-weight:900;letter-spacing:-0.5px;margin-bottom:8px;}
+.scan-sub{font-size:15px;color:var(--text2);margin-bottom:3rem;}
+
+/* Big pulsing circle */
+.pulse-ring{position:relative;width:160px;height:160px;margin:0 auto 3rem;}
+.pulse-ring::before,.pulse-ring::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid rgba(124,92,252,0.3);animation:pulse-out 2s ease-out infinite;}
+.pulse-ring::after{animation-delay:0.6s;}
+.pulse-inner{position:absolute;inset:20px;border-radius:50%;background:linear-gradient(135deg,rgba(124,92,252,0.2),rgba(124,92,252,0.05));border:1px solid rgba(124,92,252,0.4);display:flex;align-items:center;justify-content:center;font-size:36px;}
+@keyframes pulse-out{0%{transform:scale(1);opacity:0.8;}100%{transform:scale(1.8);opacity:0;}}
+
+/* Scanning bar */
+.scan-bar-wrap{background:rgba(255,255,255,0.05);border-radius:100px;height:6px;margin-bottom:2.5rem;overflow:hidden;}
+.scan-bar{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--purple),var(--purple2),var(--cyan));width:0%;transition:width 0.3s ease;}
+
+/* Stats */
+.scan-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:2rem;}
+.scan-stat{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:1.25rem;text-align:left;opacity:0;transform:translateY(10px);transition:all 0.4s;}
+.scan-stat.show{opacity:1;transform:translateY(0);}
+.scan-stat-icon{font-size:20px;margin-bottom:8px;}
+.scan-stat-num{font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1;}
+.scan-stat-label{font-size:12px;color:var(--text2);margin-top:3px;}
+
+/* Status message */
+.scan-status{font-size:13px;color:var(--purple2);height:20px;font-weight:600;animation:fadePulse 1.5s ease infinite;}
+@keyframes fadePulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+
+/* Stress score */
+.stress-reveal{opacity:0;transition:all 0.8s;margin-top:2rem;}
+.stress-reveal.show{opacity:1;}
+.stress-score-big{font-size:80px;font-weight:900;letter-spacing:-3px;line-height:1;}
+.stress-label-big{font-size:15px;color:var(--text2);}
+.stress-high{color:var(--red);}
+.stress-med{color:var(--amber);}
+.stress-low{color:var(--green);}
+
+/* CTA */
+.btn-continue{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;border:none;border-radius:14px;padding:16px 36px;font-family:'Cabinet Grotesk',sans-serif;font-size:16px;font-weight:700;cursor:pointer;margin-top:2rem;box-shadow:0 0 40px var(--glow);transition:all 0.2s;opacity:0;pointer-events:none;}
+.btn-continue.show{opacity:1;pointer-events:all;}
+.btn-continue:hover{transform:translateY(-2px);box-shadow:0 0 60px var(--glow);}
+</style>
+</head>
+<body>
+<div class="logo"><div class="logo-icon">⚡</div>Zappie</div>
+
+<div class="scan-wrap">
+  <div class="pulse-ring"><div class="pulse-inner">🔍</div></div>
+  <h1 class="scan-title">Analyse de votre inbox</h1>
+  <p class="scan-sub">Zappie scanne votre boîte mail...</p>
+
+  <div class="scan-bar-wrap"><div class="scan-bar" id="scan-bar"></div></div>
+
+  <div class="scan-stats">
+    <div class="scan-stat" id="stat-inbox">
+      <div class="scan-stat-icon">📬</div>
+      <div class="scan-stat-num" id="num-inbox">—</div>
+      <div class="scan-stat-label">Emails dans l'inbox</div>
+    </div>
+    <div class="scan-stat" id="stat-newsletters">
+      <div class="scan-stat-icon">📢</div>
+      <div class="scan-stat-num" id="num-newsletters">—</div>
+      <div class="scan-stat-label">Newsletters détectées</div>
+    </div>
+    <div class="scan-stat" id="stat-storage">
+      <div class="scan-stat-icon">💾</div>
+      <div class="scan-stat-num" id="num-storage">—</div>
+      <div class="scan-stat-label">Espace récupérable</div>
+    </div>
+    <div class="scan-stat" id="stat-accounts">
+      <div class="scan-stat-icon">🔒</div>
+      <div class="scan-stat-num" id="num-accounts">—</div>
+      <div class="scan-stat-label">Comptes détectés</div>
+    </div>
+  </div>
+
+  <div class="scan-status" id="scan-status">Connexion à Gmail...</div>
+
+  <div class="stress-reveal" id="stress-reveal">
+    <div class="stress-score-big" id="stress-score">—</div>
+    <div class="stress-label-big">Stress Score inbox</div>
+  </div>
+
+  <button class="btn-continue" id="btn-continue" onclick="location.href='/dashboard'">
+    Voir mon tableau de bord →
+  </button>
+</div>
+
+<script>
+const statuses = [
+  'Connexion à Gmail...', 'Analyse des emails...', 'Détection des newsletters...',
+  'Scan du stockage...', 'Identification des comptes...', 'Calcul du stress score...'
+];
+let statusIdx = 0;
+const statusEl = document.getElementById('scan-status');
+const barEl = document.getElementById('scan-bar');
+
+function setStatus(msg) { statusEl.textContent = msg; }
+
+async function runScan() {
+  // Animate bar and status
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    progress = Math.min(progress + Math.random() * 3, 85);
+    barEl.style.width = progress + '%';
+    if (statusIdx < statuses.length - 1) {
+      statusIdx = Math.floor(progress / (100 / statuses.length));
+      setStatus(statuses[Math.min(statusIdx, statuses.length - 1)]);
+    }
+  }, 200);
+
+  try {
+    const res = await fetch('/api/scan');
+    const data = await res.json();
+
+    clearInterval(progressInterval);
+    barEl.style.width = '100%';
+
+    // Reveal stats one by one
+    await revealStat('stat-inbox', 'num-inbox', data.inboxCount, '', 400);
+    await revealStat('stat-newsletters', 'num-newsletters', data.subsCount, '', 600);
+    await revealStat('stat-storage', 'num-storage', data.storageMB, ' MB', 800);
+    await revealStat('stat-accounts', 'num-accounts', data.subsCount, '', 1000);
+
+    // Reveal stress score
+    await sleep(1200);
+    setStatus('Calcul du stress score...');
+    await sleep(800);
+
+    const stressEl = document.getElementById('stress-score');
+    const score = data.stressScore || 50;
+    stressEl.textContent = score + '%';
+    stressEl.className = 'stress-score-big ' + (score > 70 ? 'stress-high' : score > 40 ? 'stress-med' : 'stress-low');
+    document.getElementById('stress-reveal').classList.add('show');
+
+    setStatus(score > 70 ? '😵 Inbox critique détectée !' : score > 40 ? '⚠️ Inbox chargée détectée' : '✅ Inbox en bon état');
+
+    // Show CTA
+    await sleep(1000);
+    document.getElementById('btn-continue').classList.add('show');
+
+    // Auto redirect after 4s
+    setTimeout(() => location.href = '/dashboard', 4000);
+
+  } catch (e) {
+    clearInterval(progressInterval);
+    barEl.style.width = '100%';
+    setStatus('Scan terminé');
+    document.getElementById('btn-continue').classList.add('show');
+  }
+}
+
+async function revealStat(cardId, numId, value, suffix, delay) {
+  await sleep(delay);
+  const card = document.getElementById(cardId);
+  const num = document.getElementById(numId);
+  card.classList.add('show');
+  // Count up animation
+  let current = 0;
+  const target = value || 0;
+  const duration = 600;
+  const steps = 20;
+  const increment = target / steps;
+  const interval = duration / steps;
+  const counter = setInterval(() => {
+    current = Math.min(current + increment, target);
+    num.textContent = Math.round(current).toLocaleString('fr-FR') + suffix;
+    if (current >= target) clearInterval(counter);
+  }, interval);
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+runScan();
+</script>
+</body>
+</html>
