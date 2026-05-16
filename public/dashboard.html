@@ -756,6 +756,11 @@ function selectPeriod(btn, months) {
 
 async function loadArchiveCount() {
   try {
+    // Reset after counter
+    document.getElementById('ba-after-num').textContent = '—';
+    document.getElementById('ba-after-sub') && (document.getElementById('ba-after-sub').textContent = 'inbox après reset');
+    document.getElementById('archive-result').innerHTML = '';
+
     var res = await fetch('/api/archive-count?months=' + selectedPeriod);
     var data = await res.json();
     var count = data.count || 0;
