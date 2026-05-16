@@ -620,6 +620,23 @@ app.post('/api/auto-filter', async (req, res) => {
   }
 });
 
+
+// ─── STATS DASHBOARD ─────────────────────────────────────────────────────────
+app.get('/api/stats', async (req, res) => {
+  if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const gmail = await getGmailClient(req.session.tokens);
+    // Get inbox count
+    const { data: inboxData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'in:inbox' });
+    const inboxCount = inboxData.resultSizeEstimate || 0;
+    // Get Zappie label count
+    const { data: zappieData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'label:Zappie' });
+    const zappieCount = zappieData.resultSizeEstimate || 0;
+    const timeSaved = Math.round(zappieCount * 0.5);
+    res.json({ inboxCount, zappieCount, timeSaved });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.listen(PORT, () => console.log(`✅ Zappie tourne sur http://localhost:${PORT}`));
 
 // ─── STRIPE PAIEMENT ──────────────────────────────────────────────────────────
