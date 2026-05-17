@@ -506,25 +506,28 @@ async function loadStats() {
     var stateEl = document.getElementById('hero-state');
     stateEl.textContent = score > 70 ? 'en surcharge.' : score > 40 ? 'chargée.' : 'sous contrôle.';
 
-    // Render categories table
+    // Render categories table with fixed IDs
+    console.log('Stats reçues:', d);
     var table = document.getElementById('cat-table');
-    if (table && cats) {
+    if (table) {
       table.style.display = 'block';
-      var rows = [
-        {icon:'📬', label:'Boîte principale', num: cats.inbox||0, color:'var(--red)'},
-        {icon:'🎯', label:'Promotions', num: cats.promotions||0, color:'var(--amber)'},
-        {icon:'👥', label:'Réseaux sociaux', num: cats.social||0, color:'var(--cyan)'},
-        {icon:'🔔', label:'Notifications', num: cats.updates||0, color:'var(--text2)'},
-        {icon:'⚡', label:'Nettoyés par Zappie', num: cats.zappie||0, color:'var(--green)'},
-        {icon:'🚫', label:'Spam', num: cats.spam||0, color:'var(--red)'},
-        {icon:'🗑️', label:'Corbeille', num: cats.trash||0, color:'var(--text3)'},
-      ];
-      table.innerHTML = rows.map(function(r) {
-        return '<div class="cat-row">' +
-          '<div class="cat-row-left"><span class="cat-row-icon">'+r.icon+'</span><span>'+r.label+'</span></div>' +
-          '<span class="cat-row-num" style="color:'+r.color+'">'+r.num.toLocaleString('fr-FR')+'</span>' +
-          '</div>';
-      }).join('');
+      table.innerHTML =
+        '<div class="cat-row"><div class="cat-row-left"><span class="cat-row-icon">📬</span><span>Boîte principale</span></div><span class="cat-row-num" id="cat-inbox" style="color:var(--red)">—</span></div>' +
+        '<div class="cat-row"><div class="cat-row-left"><span class="cat-row-icon">🎯</span><span>Promotions</span></div><span class="cat-row-num" id="cat-promotions" style="color:var(--amber)">—</span></div>' +
+        '<div class="cat-row"><div class="cat-row-left"><span class="cat-row-icon">👥</span><span>Réseaux sociaux</span></div><span class="cat-row-num" id="cat-social" style="color:var(--cyan)">—</span></div>' +
+        '<div class="cat-row"><div class="cat-row-left"><span class="cat-row-icon">🔔</span><span>Notifications</span></div><span class="cat-row-num" id="cat-updates" style="color:var(--text2)">—</span></div>' +
+        '<div class="cat-row"><div class="cat-row-left"><span class="cat-row-icon">⚡</span><span>Nettoyés par Zappie</span></div><span class="cat-row-num" id="cat-zappie" style="color:var(--green)">—</span></div>' +
+        '<div class="cat-row"><div class="cat-row-left"><span class="cat-row-icon">🚫</span><span>Spam</span></div><span class="cat-row-num" id="cat-spam" style="color:var(--red)">—</span></div>' +
+        '<div class="cat-row"><div class="cat-row-left"><span class="cat-row-icon">🗑️</span><span>Corbeille</span></div><span class="cat-row-num" id="cat-trash" style="color:var(--text3)">—</span></div>';
+
+      // Map each category independently
+      document.getElementById('cat-inbox').textContent = (cats.inbox || 0).toLocaleString('fr-FR');
+      document.getElementById('cat-promotions').textContent = (cats.promotions || 0).toLocaleString('fr-FR');
+      document.getElementById('cat-social').textContent = (cats.social || 0).toLocaleString('fr-FR');
+      document.getElementById('cat-updates').textContent = (cats.updates || 0).toLocaleString('fr-FR');
+      document.getElementById('cat-zappie').textContent = (cats.zappie || 0).toLocaleString('fr-FR');
+      document.getElementById('cat-spam').textContent = (cats.spam || 0).toLocaleString('fr-FR');
+      document.getElementById('cat-trash').textContent = (cats.trash || 0).toLocaleString('fr-FR');
     }
   } catch {}
 }
