@@ -617,9 +617,9 @@ async function loadArchiveCount() {
     var label = selectedPeriod >= 12 ? (selectedPeriod/12)+' an' : selectedPeriod+' mois';
 
     document.getElementById('ba-before').textContent = inboxBefore.toLocaleString('fr-FR');
-    document.getElementById('ba-before-sub').textContent = 'emails actuellement dans l'inbox';
+    document.getElementById('ba-before-sub').textContent = 'emails actuellement dans l\'inbox';
     document.getElementById('ba-after').textContent = inboxAfterEstimate.toLocaleString('fr-FR');
-    document.getElementById('ba-after-sub').textContent = 'inbox après reset estimée';
+    document.getElementById('ba-after-sub').textContent = 'inbox après reset (estimée)';
 
     // Show archiveable count info
     var archInfo = document.getElementById('archive-info');
