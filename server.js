@@ -162,12 +162,26 @@ app.get('/api/stats', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
     const gmail = await getGmailClient(req.session.tokens);
-    const [inboxData, zappieData] = await Promise.all([
-      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'in:inbox' }),
-      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'label:Zappie' })
-    ]);
-    const inboxCount = inboxData.data.resultSizeEstimate || 0;
-    const zappieCount = zappieData.data.resultSizeEstimate || 0;
+
+    // Get real counts using label info (accurate)
+    const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
+    const inboxLabel = labelsData.labels.find(l => l.id === 'INBOX');
+    const zappieLabel = labelsData.labels.find(l => l.name === 'Zappie');
+
+    // Get real inbox count from label details
+    let inboxCount = 0;
+    let zappieCount = 0;
+
+    if (inboxLabel) {
+      const { data: inboxDetail } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
+      inboxCount = inboxDetail.messagesTotal || 0;
+    }
+
+    if (zappieLabel) {
+      const { data: zappieDetail } = await gmail.users.labels.get({ userId: 'me', id: zappieLabel.id });
+      zappieCount = zappieDetail.messagesTotal || 0;
+    }
+
     const timeSaved = Math.round(zappieCount * 0.5);
     const stressScore = Math.max(5, Math.min(99, Math.round((inboxCount / Math.max(inboxCount + zappieCount, 1)) * 100)));
     res.json({ inboxCount, zappieCount, timeSaved, stressScore });
