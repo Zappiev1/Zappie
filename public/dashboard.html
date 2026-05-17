@@ -54,6 +54,14 @@ main{max-width:960px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index
 
 .health-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
 @media(max-width:600px){.health-metrics{grid-template-columns:1fr 1fr;}}
+
+.cat-table{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;overflow:hidden;margin-top:1rem;}
+.cat-row{display:flex;align-items:center;justify-content:space-between;padding:12px 1.25rem;border-bottom:1px solid var(--border2);transition:all 0.2s;}
+.cat-row:last-child{border-bottom:none;}
+.cat-row:hover{background:rgba(255,255,255,0.03);}
+.cat-row-left{display:flex;align-items:center;gap:10px;font-size:13px;}
+.cat-row-icon{font-size:16px;width:24px;text-align:center;}
+.cat-row-num{font-size:15px;font-weight:700;}
 .metric{background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:14px;padding:1rem;text-align:center;}
 .metric-num{font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:3px;}
 .metric-label{font-size:11px;color:var(--text2);}
@@ -256,6 +264,7 @@ main{max-width:960px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index
         <div class="metric"><div class="metric-num m-live" id="m-live">0</div><div class="metric-label">Filtrés live</div></div>
       </div>
     </div>
+    <div class="cat-table" id="cat-table" style="display:none"></div>
   </div>
 
   <!-- CTA ANALYZE -->
@@ -276,6 +285,7 @@ main{max-width:960px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index
     <button class="tab" onclick="switchTab('archive')">🧹 Inbox Reset</button>
     <button class="tab" onclick="switchTab('brief')">☀️ Morning Brief</button>
     <button class="tab" onclick="switchTab('footprint')">🌐 Empreinte</button>
+    <button class="tab" onclick="switchTab('alias')">🛡️ Alias <span style="font-size:9px;background:rgba(124,92,252,0.3);padding:2px 6px;border-radius:100px;margin-left:4px;">BIENTÔT</span></button>
   </div>
 
   <!-- CLEANED -->
@@ -382,6 +392,46 @@ main{max-width:960px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index
     <div class="cat-filters" id="cat-filters"></div>
     <div id="footprint-list"></div>
   </div>
+  <!-- ALIAS -->
+  <div class="tab-panel" id="panel-alias">
+    <div style="background:linear-gradient(135deg,rgba(124,92,252,0.12),rgba(6,182,212,0.06));border:1px solid var(--border);border-radius:24px;padding:2.5rem;text-align:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:16px;right:16px;background:rgba(124,92,252,0.2);border:1px solid var(--border);border-radius:100px;padding:4px 14px;font-size:11px;font-weight:700;color:var(--purple2);">EN DÉVELOPPEMENT</div>
+      <div style="font-size:56px;margin-bottom:1.5rem;">🛡️</div>
+      <h2 style="font-size:28px;font-weight:900;letter-spacing:-0.5px;margin-bottom:12px;">Zappie Alias</h2>
+      <p style="font-size:15px;color:var(--text2);max-width:480px;margin:0 auto 1.5rem;line-height:1.7;">Créez des adresses alias intelligentes pour protéger votre vraie adresse Gmail. Fini le spam, fini les newsletters indésirables — coupez un alias en 1 clic.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:2rem;">
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:1rem 1.5rem;text-align:left;min-width:180px;">
+          <div style="font-size:20px;margin-bottom:6px;">🔒</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Alias protégé</div>
+          <div style="font-size:12px;color:var(--text2);">shopping@zappie.app transfère vers votre Gmail</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:1rem 1.5rem;text-align:left;min-width:180px;">
+          <div style="font-size:20px;margin-bottom:6px;">⚡</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Désactivation 1 clic</div>
+          <div style="font-size:12px;color:var(--text2);">Coupez les spams instantanément sans changer d'email</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:1rem 1.5rem;text-align:left;min-width:180px;">
+          <div style="font-size:20px;margin-bottom:6px;">🤖</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px;">IA anti-spam</div>
+          <div style="font-size:12px;color:var(--text2);">L'IA détecte et bloque automatiquement les abus</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:16px;padding:1.5rem;max-width:400px;margin:0 auto 2rem;">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:1rem;">Cette fonctionnalité vous intéresse ?</div>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <button onclick="voteAlias(1)" id="vote-up" style="display:flex;align-items:center;gap:8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:var(--green);padding:12px 24px;border-radius:12px;font-family:'Cabinet Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;">
+            👍 <span id="vote-up-count">—</span>
+          </button>
+          <button onclick="voteAlias(-1)" id="vote-down" style="display:flex;align-items:center;gap:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:var(--red);padding:12px 24px;border-radius:12px;font-family:'Cabinet Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;">
+            👎 <span id="vote-down-count">—</span>
+          </button>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:12px;" id="vote-msg"></div>
+      </div>
+      <div style="font-size:13px;color:var(--text3);">🔔 Nous vous notifierons dès que la fonctionnalité sera disponible</div>
+    </div>
+  </div>
+
 </main>
 
 <!-- PRO MODAL -->
@@ -441,7 +491,8 @@ async function loadStats() {
     var res = await fetch('/api/stats');
     var d = await res.json();
     if (d.error) return;
-    document.getElementById('m-inbox').textContent = (d.inboxCount || 0).toLocaleString('fr-FR');
+    var cats = d.categories || {};
+    document.getElementById('m-inbox').textContent = (cats.inbox || 0).toLocaleString('fr-FR');
     document.getElementById('m-clean').textContent = (d.zappieCount || 0).toLocaleString('fr-FR');
     document.getElementById('m-time').textContent = (d.timeSaved || 0).toLocaleString('fr-FR');
     var score = d.stressScore || 0;
@@ -454,6 +505,27 @@ async function loadStats() {
     badge.className = 'health-badge ' + (score > 70 ? 'badge-alert' : score > 40 ? 'badge-warn' : 'badge-clean');
     var stateEl = document.getElementById('hero-state');
     stateEl.textContent = score > 70 ? 'en surcharge.' : score > 40 ? 'chargée.' : 'sous contrôle.';
+
+    // Render categories table
+    var table = document.getElementById('cat-table');
+    if (table && cats) {
+      table.style.display = 'block';
+      var rows = [
+        {icon:'📬', label:'Boîte principale', num: cats.inbox||0, color:'var(--red)'},
+        {icon:'🎯', label:'Promotions', num: cats.promotions||0, color:'var(--amber)'},
+        {icon:'👥', label:'Réseaux sociaux', num: cats.social||0, color:'var(--cyan)'},
+        {icon:'🔔', label:'Notifications', num: cats.updates||0, color:'var(--text2)'},
+        {icon:'⚡', label:'Nettoyés par Zappie', num: cats.zappie||0, color:'var(--green)'},
+        {icon:'🚫', label:'Spam', num: cats.spam||0, color:'var(--red)'},
+        {icon:'🗑️', label:'Corbeille', num: cats.trash||0, color:'var(--text3)'},
+      ];
+      table.innerHTML = rows.map(function(r) {
+        return '<div class="cat-row">' +
+          '<div class="cat-row-left"><span class="cat-row-icon">'+r.icon+'</span><span>'+r.label+'</span></div>' +
+          '<span class="cat-row-num" style="color:'+r.color+'">'+r.num.toLocaleString('fr-FR')+'</span>' +
+          '</div>';
+      }).join('');
+    }
   } catch {}
 }
 
@@ -466,6 +538,7 @@ function switchTab(tab) {
   tabs[map[tab]].classList.add('active');
   document.getElementById('panel-'+tab).classList.add('active');
   if (tab === 'archive') loadArchiveCount();
+  if (tab === 'alias') loadAliasVotes();
 }
 
 // ── ANALYZE ───────────────────────────────────────────────────────────────────
@@ -828,6 +901,42 @@ function showToast(msg) {
   var t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');}, 3500);
+}
+
+// ── ALIAS VOTES ──────────────────────────────────────────────────────────────
+var aliasVotes = {up: 0, down: 0};
+var userVoted = false;
+
+async function loadAliasVotes() {
+  try {
+    var res = await fetch('/api/alias-votes');
+    var data = await res.json();
+    aliasVotes = data;
+    document.getElementById('vote-up-count').textContent = data.up || 0;
+    document.getElementById('vote-down-count').textContent = data.down || 0;
+  } catch {
+    document.getElementById('vote-up-count').textContent = '0';
+    document.getElementById('vote-down-count').textContent = '0';
+  }
+}
+
+async function voteAlias(val) {
+  if (userVoted) { showToast('Tu as déjà voté !'); return; }
+  userVoted = true;
+  try {
+    var res = await fetch('/api/alias-vote', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({vote: val})});
+    var data = await res.json();
+    document.getElementById('vote-up-count').textContent = data.up || 0;
+    document.getElementById('vote-down-count').textContent = data.down || 0;
+    var msg = document.getElementById('vote-msg');
+    if (val === 1) {
+      msg.textContent = '✅ Merci ! Ton vote compte pour décider si on développe cette feature.';
+      msg.style.color = 'var(--green)';
+    } else {
+      msg.textContent = 'Noté ! Tu peux nous dire ce que tu préférerais en nous contactant.';
+      msg.style.color = 'var(--text2)';
+    }
+  } catch { showToast('❌ Erreur lors du vote'); }
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────

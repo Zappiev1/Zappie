@@ -163,28 +163,50 @@ app.get('/api/stats', async (req, res) => {
   try {
     const gmail = await getGmailClient(req.session.tokens);
 
-    // Get real counts using label info (accurate)
     const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
-    const inboxLabel = labelsData.labels.find(l => l.id === 'INBOX');
     const zappieLabel = labelsData.labels.find(l => l.name === 'Zappie');
 
-    // Get real inbox count from label details
-    let inboxCount = 0;
+    // Get all label details in parallel
+    const labelIds = ['INBOX', 'CATEGORY_PROMOTIONS', 'CATEGORY_SOCIAL', 'CATEGORY_UPDATES', 'SPAM', 'SENT', 'TRASH'];
+    const labelDetails = await Promise.all(
+      labelIds.map(id => gmail.users.labels.get({ userId: 'me', id }).catch(() => null))
+    );
+
     let zappieCount = 0;
-
-    if (inboxLabel) {
-      const { data: inboxDetail } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
-      inboxCount = inboxDetail.messagesTotal || 0;
-    }
-
     if (zappieLabel) {
-      const { data: zappieDetail } = await gmail.users.labels.get({ userId: 'me', id: zappieLabel.id });
-      zappieCount = zappieDetail.messagesTotal || 0;
+      const { data: zd } = await gmail.users.labels.get({ userId: 'me', id: zappieLabel.id });
+      zappieCount = zd.messagesTotal || 0;
     }
+
+    const getCount = (idx) => labelDetails[idx]?.data?.messagesTotal || 0;
+
+    const inboxMain = getCount(0);
+    const promotions = getCount(1);
+    const social = getCount(2);
+    const updates = getCount(3);
+    const spam = getCount(4);
+    const sent = getCount(5);
+    const trash = getCount(6);
 
     const timeSaved = Math.round(zappieCount * 0.5);
-    const stressScore = Math.max(5, Math.min(99, Math.round((inboxCount / Math.max(inboxCount + zappieCount, 1)) * 100)));
-    res.json({ inboxCount, zappieCount, timeSaved, stressScore });
+    const stressScore = Math.max(5, Math.min(99, Math.round((inboxMain / Math.max(inboxMain + zappieCount, 1)) * 100)));
+
+    res.json({
+      inboxCount: inboxMain,
+      categories: {
+        inbox: inboxMain,
+        promotions,
+        social,
+        updates,
+        spam,
+        sent,
+        trash,
+        zappie: zappieCount
+      },
+      zappieCount,
+      timeSaved,
+      stressScore
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -193,22 +215,28 @@ app.get('/api/scan', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
     const gmail = await getGmailClient(req.session.tokens);
-    const [inboxData, storageData, subsData, zappieData] = await Promise.all([
-      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'in:inbox' }),
+
+    // Get real inbox count via label
+    const { data: inboxLabel } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
+    const inboxCount = inboxLabel.messagesTotal || 0;
+
+    // Get other counts via estimates (ok for scan preview)
+    const [storageData, subsData, zappieData] = await Promise.all([
       gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'has:attachment larger:1M' }),
       gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'unsubscribe' }),
       gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'label:Zappie' })
     ]);
-    const inboxCount = inboxData.data.resultSizeEstimate || 0;
     const storageEmails = storageData.data.resultSizeEstimate || 0;
     const subsCount = subsData.data.resultSizeEstimate || 0;
     const zappieCount = zappieData.data.resultSizeEstimate || 0;
+    const storageMB = storageEmails * 4;
+
     const stressScore = Math.min(99, Math.round(
       Math.min(inboxCount / 500, 1) * 40 +
       Math.min(storageEmails / 100, 1) * 30 +
       Math.min(subsCount / 200, 1) * 30
     ));
-    res.json({ inboxCount, storageEmails, subsCount, zappieCount, stressScore, storageMB: storageEmails * 4 });
+    res.json({ inboxCount, storageEmails, subsCount, zappieCount, stressScore, storageMB });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -523,6 +551,21 @@ app.post('/api/auto-filter', async (req, res) => {
     }
     res.json({ filtered });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// ─── API: ALIAS VOTES ─────────────────────────────────────────────────────────
+const aliasVotes = { up: 0, down: 0 };
+
+app.get('/api/alias-votes', (req, res) => {
+  res.json(aliasVotes);
+});
+
+app.post('/api/alias-vote', (req, res) => {
+  const { vote } = req.body;
+  if (vote === 1) aliasVotes.up++;
+  else if (vote === -1) aliasVotes.down++;
+  res.json(aliasVotes);
 });
 
 app.listen(PORT, () => console.log(`✅ Zappie tourne sur http://localhost:${PORT}`));
