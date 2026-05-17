@@ -26,7 +26,7 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
 .btn-pro{background:linear-gradient(135deg,var(--purple),#5b3fd4);color:#fff;border:none;border-radius:100px;padding:6px 16px;font-family:'Cabinet Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 0 14px var(--glow2);}
 .btn-logout{background:transparent;border:1px solid var(--border2);color:var(--text3);padding:5px 12px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'Cabinet Grotesk',sans-serif;}
 
-main{max-width:960px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index:1;}
+main{max-width:1400px;margin:0 auto;padding:2rem 3rem;position:relative;z-index:1;}
 
 /* ── HERO SECTION ── */
 .hero-section{margin-bottom:2.5rem;}
@@ -35,12 +35,12 @@ main{max-width:960px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index
 .hero-title .highlight{background:linear-gradient(135deg,var(--purple2),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 
 /* Inbox Health Card */
-.inbox-health{background:linear-gradient(135deg,rgba(124,92,252,0.1),rgba(6,182,212,0.05));border:1px solid var(--border);border-radius:24px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;}
+.inbox-health{background:linear-gradient(135deg,rgba(124,92,252,0.1),rgba(6,182,212,0.05));border:1px solid var(--border);border-radius:24px;padding:2.5rem;margin-bottom:1.5rem;position:relative;overflow:hidden;}
 .inbox-health::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,var(--glow2),transparent 70%);pointer-events:none;}
 .health-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;}
 .health-left{}
 .health-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
-.health-score{font-size:72px;font-weight:900;letter-spacing:-3px;line-height:1;}
+.health-score{font-size:96px;font-weight:900;letter-spacing:-4px;line-height:1;}
 .health-score.bad{color:var(--red);}
 .health-score.med{color:var(--amber);}
 .health-score.good{color:var(--green);}
@@ -62,8 +62,8 @@ main{max-width:960px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index
 .cat-row-left{display:flex;align-items:center;gap:10px;font-size:13px;}
 .cat-row-icon{font-size:16px;width:24px;text-align:center;}
 .cat-row-num{font-size:15px;font-weight:700;}
-.metric{background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:14px;padding:1rem;text-align:center;}
-.metric-num{font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:3px;}
+.metric{background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:14px;padding:1.5rem;text-align:center;}
+.metric-num{font-size:42px;font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:3px;}
 .metric-label{font-size:11px;color:var(--text2);}
 .m-inbox{color:var(--red);}
 .m-clean{color:var(--green);}
@@ -563,6 +563,7 @@ async function doAnalyze() {
     showToast('✅ ' + processed + ' analysés — ' + moved + ' nettoyés !');
     loadStats();
     loadCleanedEmails();
+    loadArchiveCount();
   } catch (e) { showToast('❌ Erreur lors de l\'analyse'); }
   clearInterval(scanInterval);
   msg.textContent = '✅ Analyse terminée !';
@@ -610,6 +611,8 @@ async function doRestore(id) {
   if (el) { el.style.opacity='0'; el.style.transform='translateX(20px)'; el.style.transition='all 0.3s'; setTimeout(function(){el.remove();},300); }
   showToast('↩ Email restauré dans l\'inbox !');
   loadStats();
+  loadCleanedEmails();
+  loadArchiveCount();
 }
 
 async function doDelete(id) {

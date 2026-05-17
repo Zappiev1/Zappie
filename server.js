@@ -163,46 +163,31 @@ app.get('/api/stats', async (req, res) => {
   try {
     const gmail = await getGmailClient(req.session.tokens);
 
-    const { data: labelsData } = await gmail.users.labels.list({ userId: 'me' });
-    const zappieLabel = labelsData.labels.find(l => l.name === 'Zappie');
+    // Use category queries to match what Gmail shows visually
+    const [primaryRes, promoRes, socialRes, updatesRes, spamRes, trashRes, zappieRes] = await Promise.all([
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'category:primary in:inbox' }),
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'category:promotions in:inbox' }),
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'category:social in:inbox' }),
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'category:updates in:inbox' }),
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'in:spam' }),
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'in:trash' }),
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'label:Zappie -in:inbox' })
+    ]);
 
-    // Get all label details in parallel
-    const labelIds = ['INBOX', 'CATEGORY_PROMOTIONS', 'CATEGORY_SOCIAL', 'CATEGORY_UPDATES', 'SPAM', 'SENT', 'TRASH'];
-    const labelDetails = await Promise.all(
-      labelIds.map(id => gmail.users.labels.get({ userId: 'me', id }).catch(() => null))
-    );
-
-    let zappieCount = 0;
-    if (zappieLabel) {
-      const { data: zd } = await gmail.users.labels.get({ userId: 'me', id: zappieLabel.id });
-      zappieCount = zd.messagesTotal || 0;
-    }
-
-    const getCount = (idx) => labelDetails[idx]?.data?.messagesTotal || 0;
-
-    const inboxMain = getCount(0);
-    const promotions = getCount(1);
-    const social = getCount(2);
-    const updates = getCount(3);
-    const spam = getCount(4);
-    const sent = getCount(5);
-    const trash = getCount(6);
+    const inboxMain = primaryRes.data.resultSizeEstimate || 0;
+    const promotions = promoRes.data.resultSizeEstimate || 0;
+    const social = socialRes.data.resultSizeEstimate || 0;
+    const updates = updatesRes.data.resultSizeEstimate || 0;
+    const spam = spamRes.data.resultSizeEstimate || 0;
+    const trash = trashRes.data.resultSizeEstimate || 0;
+    const zappieCount = zappieRes.data.resultSizeEstimate || 0;
 
     const timeSaved = Math.round(zappieCount * 0.5);
     const stressScore = Math.max(5, Math.min(99, Math.round((inboxMain / Math.max(inboxMain + zappieCount, 1)) * 100)));
 
     res.json({
       inboxCount: inboxMain,
-      categories: {
-        inbox: inboxMain,
-        promotions,
-        social,
-        updates,
-        spam,
-        sent,
-        trash,
-        zappie: zappieCount
-      },
+      categories: { inbox: inboxMain, promotions, social, updates, spam, trash, zappie: zappieCount },
       zappieCount,
       timeSaved,
       stressScore
@@ -216,16 +201,13 @@ app.get('/api/scan', async (req, res) => {
   try {
     const gmail = await getGmailClient(req.session.tokens);
 
-    // Get real inbox count via label
-    const { data: inboxLabel } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
-    const inboxCount = inboxLabel.messagesTotal || 0;
-
-    // Get other counts via estimates (ok for scan preview)
-    const [storageData, subsData, zappieData] = await Promise.all([
+    const [inboxData2, storageData, subsData, zappieData] = await Promise.all([
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'category:primary in:inbox' }),
       gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'has:attachment larger:1M' }),
       gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'unsubscribe' }),
-      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'label:Zappie' })
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'label:Zappie -in:inbox' })
     ]);
+    const inboxCount = inboxData2.data.resultSizeEstimate || 0;
     const storageEmails = storageData.data.resultSizeEstimate || 0;
     const subsCount = subsData.data.resultSizeEstimate || 0;
     const zappieCount = zappieData.data.resultSizeEstimate || 0;
@@ -292,7 +274,7 @@ app.get('/api/zappie-emails', async (req, res) => {
   if (!req.session.tokens) return res.status(401).json({ error: 'Non connecté' });
   try {
     const gmail = await getGmailClient(req.session.tokens);
-    const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 50, q: 'label:Zappie' });
+    const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 50, q: 'label:Zappie -in:inbox' });
     if (!data.messages) return res.json({ emails: [], total: 0 });
     const emails = await Promise.all(data.messages.slice(0, 20).map(async msg => {
       try {
@@ -364,14 +346,14 @@ app.get('/api/archive-count', async (req, res) => {
     cutoff.setMonth(cutoff.getMonth() - months);
     const dateStr = `${cutoff.getFullYear()}/${String(cutoff.getMonth() + 1).padStart(2, '0')}/${String(cutoff.getDate()).padStart(2, '0')}`;
 
-    // Get real inbox total via label
-    const { data: inboxLabel } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
-    const inboxBefore = inboxLabel.messagesTotal || 0;
+    // Use category:primary to match what Gmail shows
+    const [inboxRes, archRes] = await Promise.all([
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'category:primary in:inbox' }),
+      gmail.users.messages.list({ userId: 'me', maxResults: 1, q: `category:primary in:inbox before:${dateStr}` })
+    ]);
 
-    // Get archiveable count
-    const { data: archData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: `in:inbox before:${dateStr}` });
-    const archiveableCount = archData.resultSizeEstimate || 0;
-
+    const inboxBefore = inboxRes.data.resultSizeEstimate || 0;
+    const archiveableCount = archRes.data.resultSizeEstimate || 0;
     const inboxAfterEstimate = Math.max(0, inboxBefore - archiveableCount);
 
     res.json({ inboxBefore, archiveableCount, inboxAfterEstimate, months });
@@ -393,9 +375,9 @@ app.post('/api/archive-old', async (req, res) => {
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - months);
     const dateStr = `${cutoff.getFullYear()}/${String(cutoff.getMonth() + 1).padStart(2, '0')}/${String(cutoff.getDate()).padStart(2, '0')}`;
-    // Get real inbox count before via label
-    const { data: inboxLabelBefore } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
-    const inboxBefore = inboxLabelBefore.messagesTotal || 0;
+    // Get real inbox count matching Gmail visible count
+    const { data: inboxBeforeData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'category:primary in:inbox' });
+    const inboxBefore = inboxBeforeData.resultSizeEstimate || 0;
     let allMessages = [];
     let pageToken = undefined;
     do {
@@ -410,10 +392,10 @@ app.post('/api/archive-old', async (req, res) => {
         gmail.users.messages.modify({ userId: 'me', id: msg.id, requestBody: { removeLabelIds: ['INBOX'] } }).catch(() => {})
       ));
     }
-    // Wait then get real inbox count via label
+    // Wait then get real inbox count matching Gmail visible
     await sleep(1500);
-    const { data: inboxLabelAfter } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
-    const inboxAfter = inboxLabelAfter.messagesTotal || 0;
+    const { data: inboxAfterData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'category:primary in:inbox' });
+    const inboxAfter = inboxAfterData.resultSizeEstimate || 0;
     const reduction = inboxBefore > 0 ? Math.round((allMessages.length / inboxBefore) * 100) : 0;
     res.json({ archived: allMessages.length, archiveableCount: allMessages.length, inboxBefore, inboxAfter, reduction });
   } catch (e) { console.error('Archive error:', e.message); res.status(500).json({ error: e.message }); }
