@@ -335,8 +335,18 @@ app.get('/api/archive-count', async (req, res) => {
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - months);
     const dateStr = `${cutoff.getFullYear()}/${String(cutoff.getMonth() + 1).padStart(2, '0')}/${String(cutoff.getDate()).padStart(2, '0')}`;
-    const { data } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: `in:inbox before:${dateStr}` });
-    res.json({ count: data.resultSizeEstimate || 0, months });
+
+    // Get real inbox total via label
+    const { data: inboxLabel } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
+    const inboxBefore = inboxLabel.messagesTotal || 0;
+
+    // Get archiveable count
+    const { data: archData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: `in:inbox before:${dateStr}` });
+    const archiveableCount = archData.resultSizeEstimate || 0;
+
+    const inboxAfterEstimate = Math.max(0, inboxBefore - archiveableCount);
+
+    res.json({ inboxBefore, archiveableCount, inboxAfterEstimate, months });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -355,8 +365,9 @@ app.post('/api/archive-old', async (req, res) => {
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - months);
     const dateStr = `${cutoff.getFullYear()}/${String(cutoff.getMonth() + 1).padStart(2, '0')}/${String(cutoff.getDate()).padStart(2, '0')}`;
-    const { data: beforeData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'in:inbox' });
-    const inboxBefore = beforeData.resultSizeEstimate || 0;
+    // Get real inbox count before via label
+    const { data: inboxLabelBefore } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
+    const inboxBefore = inboxLabelBefore.messagesTotal || 0;
     let allMessages = [];
     let pageToken = undefined;
     do {
@@ -371,10 +382,12 @@ app.post('/api/archive-old', async (req, res) => {
         gmail.users.messages.modify({ userId: 'me', id: msg.id, requestBody: { removeLabelIds: ['INBOX'] } }).catch(() => {})
       ));
     }
-    const { data: afterData } = await gmail.users.messages.list({ userId: 'me', maxResults: 1, q: 'in:inbox' });
-    const inboxAfter = afterData.resultSizeEstimate || 0;
+    // Wait then get real inbox count via label
+    await sleep(1500);
+    const { data: inboxLabelAfter } = await gmail.users.labels.get({ userId: 'me', id: 'INBOX' });
+    const inboxAfter = inboxLabelAfter.messagesTotal || 0;
     const reduction = inboxBefore > 0 ? Math.round((allMessages.length / inboxBefore) * 100) : 0;
-    res.json({ archived: allMessages.length, inboxBefore, inboxAfter, reduction });
+    res.json({ archived: allMessages.length, archiveableCount: allMessages.length, inboxBefore, inboxAfter, reduction });
   } catch (e) { console.error('Archive error:', e.message); res.status(500).json({ error: e.message }); }
 });
 

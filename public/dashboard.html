@@ -334,6 +334,7 @@ main{max-width:960px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index
           <div class="ba-sub">inbox après reset</div>
         </div>
       </div>
+      <div style="font-size:13px;color:var(--purple2);font-weight:600;text-align:center;padding:8px 0 16px;" id="archive-info"></div>
       <div class="safety-pills">
         <div class="safety-pill">✅ Rien n'est supprimé</div>
         <div class="safety-pill">✅ Tout reste dans Gmail</div>
@@ -605,16 +606,28 @@ async function deleteAllStorage() {
 // ── ARCHIVE ───────────────────────────────────────────────────────────────────
 async function loadArchiveCount() {
   document.getElementById('ba-before').textContent = '…';
-  document.getElementById('ba-after').textContent = '—';
+  document.getElementById('ba-after').textContent = '…';
   document.getElementById('archive-result').innerHTML = '';
   try {
     var res = await fetch('/api/archive-count?months='+selectedPeriod);
     var data = await res.json();
-    var count = parseInt(data.count) || 0;
-    document.getElementById('ba-before').textContent = count.toLocaleString('fr-FR');
+    var inboxBefore = parseInt(data.inboxBefore) || 0;
+    var archiveableCount = parseInt(data.archiveableCount) || 0;
+    var inboxAfterEstimate = parseInt(data.inboxAfterEstimate) || 0;
     var label = selectedPeriod >= 12 ? (selectedPeriod/12)+' an' : selectedPeriod+' mois';
-    document.getElementById('ba-before-sub').textContent = 'emails de +'+label+' détectés';
-  } catch {}
+
+    document.getElementById('ba-before').textContent = inboxBefore.toLocaleString('fr-FR');
+    document.getElementById('ba-before-sub').textContent = 'emails actuellement dans l'inbox';
+    document.getElementById('ba-after').textContent = inboxAfterEstimate.toLocaleString('fr-FR');
+    document.getElementById('ba-after-sub').textContent = 'inbox après reset estimée';
+
+    // Show archiveable count info
+    var archInfo = document.getElementById('archive-info');
+    if (archInfo) archInfo.textContent = archiveableCount.toLocaleString('fr-FR') + ' emails de +'+label+' seront archivés';
+  } catch {
+    document.getElementById('ba-before').textContent = '—';
+    document.getElementById('ba-after').textContent = '—';
+  }
 }
 
 function selectPeriod(btn, months) {
@@ -634,9 +647,14 @@ async function doArchive() {
     if (res.status === 429) { showModal('Limite atteinte 🔒', 'Passe à Pro pour un Inbox Reset illimité !'); btn.disabled=false; spinner.style.display='none'; btnText.textContent='🧹 Repartir avec une inbox propre'; return; }
     var data = await res.json();
     var archived = parseInt(data.archived) || 0;
+    var inboxBefore = parseInt(data.inboxBefore) || 0;
     var inboxAfter = parseInt(data.inboxAfter) || 0;
     var label = selectedPeriod >= 12 ? (selectedPeriod/12)+' an' : selectedPeriod+' mois';
+    document.getElementById('ba-before').textContent = inboxBefore.toLocaleString('fr-FR');
+    document.getElementById('ba-before-sub').textContent = 'emails avant le reset';
     document.getElementById('ba-after').textContent = inboxAfter.toLocaleString('fr-FR');
+    document.getElementById('ba-after-sub').textContent = 'emails après le reset';
+    if (document.getElementById('archive-info')) document.getElementById('archive-info').textContent = archived.toLocaleString('fr-FR') + ' emails archivés avec succès';
     document.getElementById('archive-result').innerHTML =
       '<div class="archive-result-box">' +
       '<div class="archive-big-num">'+archived.toLocaleString('fr-FR')+'</div>' +
@@ -646,6 +664,7 @@ async function doArchive() {
       '</div>';
     showToast('🎉 '+archived.toLocaleString('fr-FR')+' emails archivés — Inbox propre !');
     loadStats();
+    setTimeout(loadArchiveCount, 2000);
   } catch { showToast('❌ Erreur lors du reset'); }
   btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = '🧹 Repartir avec une inbox propre';
 }
